@@ -1,4 +1,19 @@
 
+a5.Package('a5.cl')
+
+	.Enum('CLLaunchState', function(cls){
+		
+		cls.addValue('APPLICATION_INITIALIZING');
+		cls.addValue('DEPENDENCIES_LOADING');
+		cls.addValue('DEPENDENCIES_LOADED');
+		cls.addValue('AUTO_INSTANTIATION_COMPLETE');
+		cls.addValue('PLUGINS_LOADED');
+		cls.addValue('LAUNCH_INTERCEPTED');
+		cls.addValue('APPLICATION_WILL_LAUNCH');
+		cls.addValue('APPLICATION_LAUNCHED');
+})
+
+
 /**
  * @class 
  * @name a5.cl.CLEvent

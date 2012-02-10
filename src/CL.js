@@ -23,6 +23,8 @@ a5.Package("a5.cl")
 			core.initializeCore((params.environment || null), (params.clientEnvironment || null));
 		}
 		
+		this.launchState = function(){ return core.launchState(); }
+		
 		/**
 		 *
 		 * @param {Boolean} [returnString]

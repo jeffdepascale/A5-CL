@@ -28,12 +28,6 @@ a5.cl.instance = function(val){
  */
 a5.cl.CreateApplication = function(props){
 	if (!a5.cl._cl_appCreated) {
-		a5.cl._cl_appCreated = true;
-		a5.cl.Mappings = a5.cl.Filters = 
-		a5.cl.AppParams = a5.cl.Config = 
-		a5.cl.BootStrap = function(){
-			a5.cl.core.Utils.generateSystemHTMLTemplate(500, "Invalid call to CL configuration method: methods must be called prior to application launch", true);
-		}
 		var props = (props === undefined ? undefined:((typeof props === 'object') ? props : {applicationPackage:props}));
 		var initialized = false;
 		var onDomReady = function(){
@@ -42,8 +36,20 @@ a5.cl.CreateApplication = function(props){
 				a5.cl.core.Utils.generateSystemHTMLTemplate(500, str, true);
 				throw str;
 			} else {
-				if (!initialized) a5.Create(a5.cl.CL, [props])
-				initialized = true;
+				if (!initialized) {
+					a5.cl._cl_appCreated = true;
+					a5.cl.Mappings = a5.cl.Filters = 
+					a5.cl.AppParams = a5.cl.Config = 
+					a5.cl.CreateCallback =
+					a5.cl.BootStrap = function(){
+						a5.cl.core.Utils.generateSystemHTMLTemplate(500, "Invalid call to CL configuration method: methods must be called prior to application launch", true);
+					}
+					a5.Create(a5.cl.CL, [props])
+					initialized = true;
+					for(var i = 0, l = a5.cl._cl_createCallbacks.length; i<l; i++)
+						a5.cl._cl_createCallbacks[i](a5.cl.instance());
+					a5.cl._cl_createCallbacks = null;
+				}
 			}
 		}
 	
@@ -78,6 +84,11 @@ a5.cl._cl_appCreated = false;
 
 a5.cl._cl_storedCfgs = { mappings:[], filters:[], config:[], appParams:{}, pluginConfigs:[], bootStrap:null };
 
+a5.cl._cl_createCallbacks = [];
+
+a5.cl.CreateCallback = function(callback){
+	a5.cl._cl_createCallbacks.push(callback);
+}
 /**
  * 
  * @param {Array} array

@@ -16,6 +16,11 @@ a5.Package('a5.cl.core')
 			return str.replace(/(^\s+)|(\s+$)/g, "").replace(/\s{2,}/, " ");
 		}
 		
+		Utils.getParameterByName = function(name){
+		    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+		    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+		}
+		
 		Utils.mergeObject = function(mergeObj, sourceObj, $setSourceObj){
 			var setSourceObj = $setSourceObj || false,
 				retObj, prop;

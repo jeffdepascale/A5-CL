@@ -1,7 +1,7 @@
 
 a5.Package('a5.cl.core')
 	
-	.Import('a5.cl.CLEvent')
+	.Import('a5.cl.CLEvent', 'a5.cl.CLLaunchState')
 	.Extends('a5.cl.CLBase')
 	.Class("Core", 'singleton final', function(self, im){
 	
@@ -12,6 +12,7 @@ a5.Package('a5.cl.core')
 		_resourceCache,
 		_instantiator,
 		_pluginManager,
+		_launchState,
 		_manifestManager;
 		
 		this.Core = function($applicationPackage){
@@ -27,6 +28,7 @@ a5.Package('a5.cl.core')
 		this.requestManager = function(){ return _requestManager;	}	
 		this.pluginManager = function(){ return _pluginManager; }			
 		this.globalUpdateTimer = function(){return _globalUpdateTimer;}
+		this.launchState = function(){ return _launchState; }
 		
 		this.relaunch = function(){
 			self.cl().dispatchEvent(im.CLEvent.APPLICATION_WILL_RELAUNCH);
@@ -34,7 +36,7 @@ a5.Package('a5.cl.core')
 		}
 		
 		this.initializeCore = function($environment, $clientEnvironment){
-			self.cl().dispatchEvent(im.CLEvent.APPLICATION_INITIALIZING);
+			updateLaunchStatus('APPLICATION_INITIALIZING');
 			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer);
 			_manifestManager = self.create(a5.cl.core.ManifestManager);
 			_requestManager = self.create(a5.cl.core.RequestManager);
@@ -45,21 +47,21 @@ a5.Package('a5.cl.core')
 			_resourceCache.initStorageRules();
 			var loadPaths = self.config().dependencies;
 			if(loadPaths.length) _resourceCache.include(loadPaths, dependenciesLoaded, function(e){
-				self.cl().dispatchEvent(im.CLEvent.DEPENDENCIES_LOADING, e);
+				updateLaunchStatus('DEPENDENCIES_LOADING', e);
 			});
 			else dependenciesLoaded();	
 		}
 		
 		var dependenciesLoaded = function(){
-			self.cl().dispatchEvent(im.CLEvent.DEPENDENCIES_LOADED);
+			updateLaunchStatus('DEPENDENCIES_LOADED');
 			_pluginManager.instantiatePlugins();
-			self.cl().dispatchEvent(im.CLEvent.PLUGINS_LOADED);
+			updateLaunchStatus('PLUGINS_LOADED');
 			_envManager.initialize();
 			_instantiator.beginInstantiation();
 			var plgn = _pluginManager.getRegisteredProcess('launchInterceptor');
 			if(plgn){
 				var intercept = plgn.interceptLaunch(launchApplication);
-				if(intercept) self.cl().dispatchEvent(im.CLEvent.LAUNCH_INTERCEPTED, {interceptor:plgn});
+				if(intercept) updateLaunchStatus('LAUNCH_INTERCEPTED', {interceptor:plgn});
 				else launchApplication();
 			} else {
 				launchApplication();
@@ -71,7 +73,12 @@ a5.Package('a5.cl.core')
 		}
 		
 		var addOnsLoaded = function(){
-			self.cl().dispatchEvent(im.CLEvent.APPLICATION_WILL_LAUNCH);
-			self.cl().dispatchEvent(im.CLEvent.APPLICATION_LAUNCHED);	
+			updateLaunchStatus('APPLICATION_WILL_LAUNCH');
+			updateLaunchStatus('APPLICATION_LAUNCHED');	
+		}
+		
+		var updateLaunchStatus = function(type, e){
+			_launchState = im.CLLaunchState[type];
+			self.cl().dispatchEvent(im.CLEvent[type], e);
 		}
 });
