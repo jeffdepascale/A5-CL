@@ -10,8 +10,8 @@ a5.SetNamespace('a5.cl');
  * @type a5.cl.CL
  * @returns Shortcut to the instance of the A5 CL application.
  */
-a5.cl.instance = function(val){
-	return a5.cl.CL.instance(val);
+a5.cl.instance = function(){
+	return a5.cl.CL.instance();
 }
 
 /**
@@ -27,24 +27,25 @@ a5.cl.instance = function(val){
  * @type Function
  * @returns A function that returns the singleton instance of the application framework.
  */
-a5.cl.CreateApplication = function(props){
-	if (!a5.cl._cl_appCreated) {
-		var props = (props === undefined ? undefined:((typeof props === 'object') ? props : {applicationPackage:props}));
-		var initialized = false;
-		var onDomReady = function(){
-			if (!props) {
-				var str = 'CreateApplication requires at least one parameter:\n\na5.cl.CreateApplication("app");';
+a5.cl.CreateApplication = function(props, callback){
+	if (!a5.cl.instance()) {
+		if(typeof props === 'function'){
+			callback = props;
+			props = undefined;
+		}
+		props = (props === undefined ? {}:((typeof props === 'object') ? props : {applicationPackage:props}));
+		if(callback && typeof callback === 'function')
+			a5.CreateCallback(callback);
+		
+		var initialized = false,
+
+		onDomReady = function(){
+			if (!props && a5.cl.CLMain._extenderRef.length === 0) {
+				var str = 'CreateApplication requires at least one parameter:\n\na5.cl.CreateApplication("app"); or a class that extends a5.cl.CLMain.';
 				a5.cl.core.Utils.generateSystemHTMLTemplate(500, str, true);
 				throw str;
 			} else {
 				if (!initialized) {
-					a5.cl._cl_appCreated = true;
-					a5.cl.Mappings = a5.cl.Filters = 
-					a5.cl.AppParams = a5.cl.Config = 
-					a5.cl.CreateCallback =
-					a5.cl.BootStrap = function(){
-						a5.cl.core.Utils.generateSystemHTMLTemplate(500, "Invalid call to CL configuration method: methods must be called prior to application launch", true);
-					}
 					a5.Create(a5.cl.CL, [props])
 					initialized = true;
 					for(var i = 0, l = a5.cl._cl_createCallbacks.length; i<l; i++)
@@ -52,9 +53,9 @@ a5.cl.CreateApplication = function(props){
 					a5.cl._cl_createCallbacks = null;
 				}
 			}
-		}
+		},
 	
-		var domContentLoaded = function(){
+		domContentLoaded = function(){
 			if (document.addEventListener) {
 				document.removeEventListener( "DOMContentLoaded", domContentLoaded, false);
 				onDomReady();
@@ -81,51 +82,12 @@ a5.cl.CreateApplication = function(props){
 	}
 }
 
-a5.cl._cl_appCreated = false;
-
-a5.cl._cl_storedCfgs = { mappings:[], filters:[], config:[], appParams:{}, pluginConfigs:[], bootStrap:null };
-
 a5.cl._cl_createCallbacks = [];
 
 a5.cl.CreateCallback = function(callback){
 	a5.cl._cl_createCallbacks.push(callback);
 }
-/**
- * 
- * @param {Array} array
- */
-a5.cl.Mappings = function(array){ a5.cl._cl_storedCfgs.mappings = array; }
 
-/**
- * 
- * @param {Array} array
- */
-a5.cl.Filters = function(array){ a5.cl._cl_storedCfgs.filters = array; }
-
-/**
- * 
- * @param {Object} obj
- */
-a5.cl.AppParams = function(obj){ a5.cl._cl_storedCfgs.appParams = obj; }
-
-/**
- * 
- * @param {Object} obj
- */
-a5.cl.Config = function(obj){ a5.cl._cl_storedCfgs.config = obj; }
-
-/**
- * 
- * @param {string} namespace
- * @param {Object} obj
- */
-a5.cl.PluginConfig = function(namespace, obj){ a5.cl._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
-
-/**
- * 
- * @param {Function} func
- */
-a5.cl.BootStrap = function(func){ a5.cl._cl_storedCfgs.bootStrap = func; }
 
 
 
@@ -1054,8 +1016,8 @@ a5.Package('a5.cl.core')
 		}
 		
 		this.instantiateConfiguration = function(){
-			var retObj = a5.cl._cl_storedCfgs.config;
-			var plgnArray = a5.cl._cl_storedCfgs.pluginConfigs;
+			var retObj = a5.cl.CLMain._cl_storedCfgs.config;
+			var plgnArray = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
 			for (var i = 0; i < plgnArray.length; i++) {
 				var obj = {};
 				var split = plgnArray[i].nm.split('.'),
@@ -3243,7 +3205,7 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_sourceConfig = function(){
-			var cfg = a5.cl._cl_storedCfgs.pluginConfigs;
+			var cfg = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
 			var pkg = this.classPackage();
 			if(String(pkg[pkg.length-1]).toLowerCase() != this.className().toLowerCase())
 						pkg = pkg + '.' + this.constructor.className();
@@ -3287,6 +3249,16 @@ a5.Package('a5.cl')
 			return false;
 		}
 		
+		proto.createMainConfigMethod = function(type){
+			a5.cl.CLMain.prototype['set' + type.substr(0, 1).toUpperCase() + type.substr(1)] = function(){
+				a5.cl.CLMain._cl_storedCfgs[type] = Array.prototype.slice.call(arguments);
+			}
+		}
+		
+		proto.getMainConfigProps = function(type){
+			return a5.cl.CLMain._cl_storedCfgs[type];
+		}
+		
 		proto.registerAutoInstantiate = function(){
 			a5.cl.core.Instantiator.instance().registerAutoInstantiate.apply(null, arguments);
 		}
@@ -3309,6 +3281,7 @@ a5.Package("a5.cl")
 	
 		var _params,
 			_config,
+			_main,
 			core;
 		
 		this._cl_plugins = {};
@@ -3316,6 +3289,10 @@ a5.Package("a5.cl")
 		this.CL = function(params){
 			self.superclass(this);
 			_params = params;
+			if(a5.cl.CLMain._extenderRef.length)
+				_main = self.create(a5.cl.CLMain._extenderRef[0], [self]);
+			if(!params.applicationPackage)
+				params.applicationPackage = _main.classPackage();
 			core = self.create(a5.cl.core.Core, [params.applicationPackage]);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
 			_config = core.instantiator().createConfig(_config);
@@ -3333,7 +3310,7 @@ a5.Package("a5.cl")
 		/**
 		 *
 		 */
-		this.Override.appParams = function(){	return a5.cl._cl_storedCfgs.appParams; }
+		this.Override.appParams = function(){	return a5.cl.CLMain._cl_storedCfgs.appParams; }
 
 		/**
 		 *
@@ -3458,6 +3435,92 @@ a5.Package("a5.cl")
 		}
 	
 });
+
+
+a5.Package('a5.cl')
+
+	.Extends('CLBase')
+	.Static(function(CLMain){
+		CLMain._cl_storedCfgs = {config:[], appParams:{}, pluginConfigs:[]};
+	})
+	.Prototype('CLMain', 'abstract', function(proto, im, CLMain){
+		
+		proto.CLMain = function(){
+			proto.superclass(this);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
+			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
+			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
+		}
+		
+		/**
+		 * 
+		 * @param {Object} obj
+		 */
+		proto.setAppParams = function(obj){ CLMain._cl_storedCfgs.appParams = obj; }
+		
+		/**
+		 * 
+		 * @param {Object} obj
+		 */
+		proto.setConfig = function(obj){ CLMain._cl_storedCfgs.config = obj; }
+		
+		/**
+		 * 
+		 * @param {string} namespace
+		 * @param {Object} obj
+		 */
+		proto.setPluginConfig = function(namespace, obj){ proto._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
+		
+		/**
+		 * @name onlineStatusChanged
+		 * @description Called by the framework when the browser's online status has changed. This is equivalent to listening for {@link a5.cl.MVC.event:ONLINE_STATUS_CHANGE}.
+		 */
+		proto.onlineStatusChanged = function(isOnline){}
+		
+		/**
+		 * @name autoInstantiationComplete 
+		 * @description Called by the framework when auto detected classes have been successfully instantiated.
+		 */
+		proto.autoInstantiationComplete = function(){}
+		
+		/**
+		 * @name applicationWillLaunch 
+		 * @description Called by the framework when the application is about to launch.
+		 */
+		proto.applicationWillLaunch = function(){}
+		
+		/**
+		 * @name applicationLaunched 
+		 * @description Called by the framework when the application has successfully launched.
+		 */
+		proto.applicationLaunched = function(){}
+		
+		/**
+		 * @name applicationWillClose
+		 * @description Called by the framework when the window is about to be closed. This method is tied to
+		 * the onbeforeunload event in the window, and as such can additionally return back a custom string value to throw in a confirm
+		 * dialogue and allow the user to cancel the window close if desired.
+		 */
+		proto.applicationWillClose = function(){
+			
+		}
+		
+		/**
+		 * @name applicationClosed
+		 * @description Called by the framework when the window is closing.
+		 */
+		proto.applicationClosed = function(){}
+		
+		/**
+		 * @name applicationWillRelaunch
+		 * @description Called by the framework when the application is about to relaunch.
+		 */
+		proto.applicationWillRelaunch = function(){}
+})	
+
 
 
 })(this);

@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<script type="text/javascript" >
 //A5, Copyright (c) 2011, Jeff dePascale & Brian Sutliffe. http://www.jeffdepascale.com
 (function( window, undefined ) {//A5, Copyright (c) 2011, Jeff dePascale & Brian Sutliffe. http://www.jeffdepascale.com
 (function( window, undefined ) {(function(){
@@ -213,17 +218,9 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 					var isError = false;
 					if(t !== 'string'){
 						if(t === 'function'){
-							if(!attr.isA5 || !attr.doesExtend(a5.Attribute))
+							if(!t.isA5 || !attr.doesExtend(a5.Attribute))
 								isError = true;
 						} else
-							isError = true;
-					} else {
-						var cls = a5.GetNamespace(attr, scope.imports());
-						if(!cls)
-							cls = a5.GetNamespace(attr + 'Attribute', scope.imports());
-						if(cls)
-							attrDef[j] = cls;
-						else
 							isError = true;
 					}
 					if(isError)
@@ -235,14 +232,8 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 				//validate all arrays, length at least one, first is string, all remaining are objects, not arrays
 			}
 		}
-		for (i = 0, l = attributes.length; i < l; i++) {
-			var arr = attributes[i],
-				vals = [];
-			for(var j = 1, k = arr.length; j<k; j++)
-				vals.push(arr[j]);
-			attributes[i] = [arr[0], vals];
-			attrObj[arr[0].className()] = vals;
-		}
+		for (i = 0, l = attributes.length; i < l; i++)
+			attrObj[attributes[i].shift()] = attributes[i];
 			
 		var proxyFunc = function(){
 			var callOriginator,
@@ -255,11 +246,28 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 				method[prop] = proxyFunc[prop];
 			if (proxyFunc.caller.getClassInstance !== undefined)
 				callOriginator = proxyFunc.caller;
-			for(var i = 0, l = attributes.length; i<l; i++){
-				var cls = attributes[i][0],
-					clsInst = cls.instance(true),
-					props = attributes[i][1];
-				attrClasses.push({cls:clsInst, props:props});
+			for(prop in attrObj){
+				var cls, clsInst, props;
+				switch(typeof prop){
+					case 'string':
+						cls = a5.GetNamespace(prop, scope.imports());
+						if(!cls)
+							cls = a5.GetNamespace(prop + 'Attribute', scope.imports());
+						break;
+					case 'function':
+						cls = prop;
+						break;
+					default:
+						//throw error
+						return;
+				}
+				if(!cls){
+					return a5.ThrowError(309, null, {prop:prop});
+				} else {
+					clsInst = cls.instance(true);
+					props = attrObj[prop];
+					attrClasses.push({cls:clsInst, props:props});
+				}
 			}
 			
 			var processCB = function(args, isPost){
@@ -313,7 +321,7 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 			preRet = processAttribute(count, Array.prototype.slice.call(arguments));
 			return preRet;
 		}
-		proxyFunc._a5_attributes = attrObj;
+		proxyFunc._a5_attributes = attributes;
 		return proxyFunc;
 	},
 	
@@ -362,7 +370,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		}catch (e){
 			return a5.ThrowError(209, null, {nm:typeof classRef === 'string' ? classRef:(classRef.namespace ? classRef.namespace():''), errorStr:e});
 		}
-		if (ref._a5_clsDef) 
+		if (ref._a5_clsDef)
 			processDeclaration(ref._a5_clsDef, retObj, retObj, ref.imports(), ref)
 		//else
 			//TODO: throw error, invalid class declaration
@@ -393,10 +401,10 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			if (({}).hasOwnProperty.call(obj, prop) && typeof obj[prop] === 'function' && a5.core.classProxyObj[prop] === undefined) {
 				if (prop === obj.className()) {
 					obj.constructor._a5_instanceConst = obj[prop];
-					a5.core.reflection.setReflection(stRef, obj, prop, obj.constructor._a5_instanceConst);
+					a5.core.reflection.setReflection(scope, obj, prop, obj.constructor._a5_instanceConst);
 					delete obj[prop];
 				} else {
-					a5.core.reflection.setReflection(stRef, obj, prop);
+					a5.core.reflection.setReflection(scope, obj, prop);
 				}
 			}
 		}
@@ -417,14 +425,13 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		for(prop in obj){
 			if(obj.hasOwnProperty(prop)){
 				if (prop !== 'Final' && prop !== 'Override' && prop !== 'constructor' && prop !== 'prototype' && prop !== 'dealloc' && prop !== '_a5_initialized') {
-					if (sc[prop] !== undefined && sc[prop].toString().indexOf('[native code]') === -1){
-						if(sc[prop].Final == true)
-							return a5.ThrowError(201, null, {prop:prop, namespace:obj.namespace()});
-						//TODO: remove override deprecation tracking
+					if (sc[prop] !== undefined) {
 						deprecationErrors += (obj.namespace() + ' ' + prop + ' need call override\n');
 						count++;
-						return a5.ThrowError(200, null, {prop:prop, namespace:obj.namespace()});
-					}
+						//a5.ThrowError(200, null, {prop:prop, namespace:obj.namespace()});
+						//return;
+					} else  if (sc[prop] && sc[prop].Final == true)
+						return a5.ThrowError(201, null, {prop:prop, namespace:obj.namespace()});
 				}
 			}
 		}
@@ -688,20 +695,19 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 					values.push(value);
 				}
 			})
-			
-			for (i = 0, l = values.length; i < l; i++)
-				obj[values[i]] = index++;
+			for(i = 0, l = values.length; i<l; i++)
+				obj[values[i]] = index + i;
+				obj.addValue = function(value){
+					if(obj[value] === undefined)
+						obj[value] = value;
+				}
+				obj.getValue = function(id){
+					for(prop in obj)
+						if(obj[prop] === id)
+							return prop;
+					return null;
+				}
 				
-			obj.addValue = function(value){
-				if (obj[value] === undefined) 
-					obj[value] = index++;
-			}
-			obj.getValue = function(id){
-				for (prop in obj) 
-					if (obj[prop] === id) 
-						return prop;
-				return null;
-			}
 		}
 		if (pkgObj.isInterface) {
 			obj.interfaceVals = {};
@@ -754,7 +760,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 				var obj;
 				for (prop in procObj) {
 					obj = procObj[prop];
-					if (typeof obj === 'function' && obj.namespace != undefined && retObj[prop] === undefined) retObj[prop] = obj;
+					if (obj.namespace != undefined && retObj[prop] === undefined) retObj[prop] = obj;
 				}
 			};
 			
@@ -865,7 +871,7 @@ a5._a5_createQueuedPrototypes = a5.core.classBuilder._a5_createQueuedPrototypes;
 a5.SetNamespace('a5.core.classProxyObj',{
 	
 	construct:{
-		classPackage:function(getObj){ return getObj ? a5.GetNamespace(this._a5_pkg, null, true) : this._a5_pkg; },
+		classPackage:function(){ return this._a5_pkg; },
 		className:function(){ return this._a5_clsName; },
 		namespace:function(){return this._a5_namespace; },
 		imports:function(){ return this._a5_imports ? this._a5_imports():{}; },
@@ -890,12 +896,10 @@ a5.SetNamespace('a5.core.classProxyObj',{
 					if (sclConst) 
 						sclConst.apply(scope, args);
 					else a5.ThrowError(211, null, {nm:this._a5_superclass.className()});
-				} else {
+				} else
 					a5.ThrowError(212, null, {nm:this.namespace()});
-				}	
-			} else {
+			} else
 				return this._a5_superclass.prototype;
-			}	
 		},
 		instanceCount:function(){ return this._instanceCount; },
 		isInterface:function(){ return this._a5_isInterface; },
@@ -941,6 +945,11 @@ a5.SetNamespace('a5.core.classProxyObj',{
 				return GetNamespace(namespace, this.imports());
 			else
 				return this.constructor._a5_mixedMethods;
+		},
+		
+		requires:function(cls){
+			if(!a5.GetNamespace(cls))
+				return a5.ThrowError(219, null, {currClass:this.namespace(), checkedClass:cls});
 		},
 		
 		mix:function(cls){
@@ -1189,27 +1198,11 @@ a5.SetNamespace('a5.core.classProxyObj',{
 a5.SetNamespace('a5.core.verifiers', {
 	namespaceArray:[],
 	validateImplementation:function(pkgObj, obj){
-		var i, l, prop, implNM, testInst, impl, hasProp,
-			compareObjs = function(obj1, obj2){
-				for(var prop in obj1)
-					if(obj1[prop] !== obj2[prop])
-						return false;
-				return true;
-			};
+		var i, l, prop, implNM, testInst, impl, hasProp;
 		for (i = 0, l = pkgObj.implement.length; i<l; i++) {
 			implNM = pkgObj.implement[i];
 			try {
-				testInst = new obj;
-				testInst.Attributes = function(){
-					var args = Array.prototype.slice.call(arguments);
-					var func = args.pop();
-					for(var i = 0, l = args.length; i<l; i++){
-						var attr = args[i][0];
-						if(attr === 'Contract' || attr === 'ContractAttribute' || attr === ar.ContractAttribute)
-							func.attributes = args[i];
-					}
-					return func;
-				}
+				testInst = new obj(); 
 				impl = a5.GetNamespace(implNM, obj.imports());
 				if(obj._a5_clsDef)
 					obj._a5_clsDef.call(testInst, testInst, obj.imports(), obj);
@@ -1222,20 +1215,7 @@ a5.SetNamespace('a5.core.verifiers', {
 				return a5.ThrowError(213, null, {implNM:impl.namespace(), objNM:obj.namespace()});
 			for (prop in impl.interfaceVals) {
 				hasProp = testInst[prop] !== undefined;
-				var intProp = impl.interfaceVals[prop],
-					testInstProp = testInst[prop];
-				if(hasProp && 
-					typeof intProp === 'object' && 
-					testInstProp.attributes && 
-					(testInstProp.attributes[0] === 'Contract' || 
-						testInstProp.attributes[0] === 'ContractAttribute' || 
-							testInstProp.attributes[0] === a5.ContractAttribute)){
-					var isValid = true;
-					for (var i = 0, l = intProp.length; i < l; i++)
-						isValid = isValid && testInstProp.attributes.length >=(i+1) ? compareObjs(intProp[i], testInstProp.attributes[i+1]) : false;
-					if(!isValid)
-						return a5.ThrowError(601, null, {intNM:impl.namespace(), implNM:obj.namespace(), method:prop});
-				}else if (!hasProp || (hasProp && typeof impl.interfaceVals[prop] !== typeof testInst[prop]))
+				if (!hasProp || (hasProp && typeof impl.interfaceVals[prop] !== typeof testInst[prop]))
 					return a5.ThrowError(214, null, {implNM:impl.namespace(), objNM:obj.namespace()});
 			}
 			obj._implementsRef.push(impl);
@@ -1341,7 +1321,7 @@ a5.SetNamespace('a5.core.mixins', {
 				if(mixinRef[i]._a5_mixinMustExtend !== undefined){
 					for (prop in mixinRef[i]._a5_mixinMustExtend) {
 						cls = mixinRef[i]._a5_mixinMustExtend[prop];
-						if (!inst.doesExtend(a5.GetNamespace(cls, inst.imports())))
+						if (!inst.doesExtend(a5.GetNamespace(cls)))
 							return a5.ThrowError(400, null, {nm:mixinRef[i].namespace()});
 					}
 				}
@@ -1378,7 +1358,7 @@ a5.SetNamespace('a5.core.mixins', {
 			i, l, mixin;
 			
 		for (i = 0, l = mixins.length; i < l; i++) {
-			mixin = a5.GetNamespace(mixins[i], imports());
+			mixin = a5.GetNamespace(mixins[i], imports);
 			mixinInsts.push(mixin);
 			for (i = 0; i < sourceObj.constructor._mixinRef.length; i++)
 				if (sourceObj.constructor._mixinRef[i] === mixin)
@@ -1676,6 +1656,32 @@ a5.Package('a5')
 		}
 
 })
+
+
+a5.Package('a5')
+
+	.Extends('Attribute')
+	.Class('SynchronizedAttribute', function(cls){
+		
+		var lockedScopes = {};
+		
+		cls.SynchronizedAttribute = function(){
+			cls.superclass(this);
+		}
+		
+		cls.Override.methodPre = function(typeRules, args, scope, method, callback){
+			if (lockedScopes[scope.namespace()] === true) {
+				cls.throwError(625, null, {methodName:method.getName(), nm:scope.namespace()})
+			} else {
+				lockedScopes[scope.namespace()] = true;
+			}
+		}
+		
+		cls.Override.methodPost = function(typeRules, args, scope, method, callback){
+			delete lockedScopes[scope.namespace()];
+		}
+		
+});
 
 
 /**
@@ -2218,6 +2224,7 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	303:'Attribute error: First parameter must be a reference to a class that extends a5.Attribute.',
 	304:'Attribute error: invalid parameter specified for Attribute, params must be key/value pair objects.',
 	308:'Error processing attribute "{prop}", "{method}" must return a value.',
+	309:'Error processing attribute "{prop}", Attribute class definition not found.',
 	
 	//400: mixins
 	400:'invalid scope argument passed to superclass constructor on class "{nm}".',
@@ -2226,7 +2233,9 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	403:'Invalid mixin: Method "{method}" defined by more than one specified mixin.',
 	
 	//600: Contract
-	601:'Invalid implementation of Contract on interace {intNM} in class {implNM} for method {method}.'
+	
+	//625: Synchronized
+	625:'Synchronized error: attempted to use method "{methodName}" on object "{nm}" when currently in use.'
 })
 
 
@@ -2244,8 +2253,8 @@ a5.SetNamespace('a5.cl');
  * @type a5.cl.CL
  * @returns Shortcut to the instance of the A5 CL application.
  */
-a5.cl.instance = function(){
-	return a5.cl.CL.instance();
+a5.cl.instance = function(val){
+	return a5.cl.CL.instance(val);
 }
 
 /**
@@ -2261,25 +2270,24 @@ a5.cl.instance = function(){
  * @type Function
  * @returns A function that returns the singleton instance of the application framework.
  */
-a5.cl.CreateApplication = function(props, callback){
-	if (!a5.cl.instance()) {
-		if(typeof props === 'function'){
-			callback = props;
-			props = undefined;
-		}
-		props = (props === undefined ? {}:((typeof props === 'object') ? props : {applicationPackage:props}));
-		if(callback && typeof callback === 'function')
-			a5.CreateCallback(callback);
-		
-		var initialized = false,
-
-		onDomReady = function(){
-			if (!props && a5.cl.CLMain._extenderRef.length === 0) {
-				var str = 'CreateApplication requires at least one parameter:\n\na5.cl.CreateApplication("app"); or a class that extends a5.cl.CLMain.';
+a5.cl.CreateApplication = function(props){
+	if (!a5.cl._cl_appCreated) {
+		var props = (props === undefined ? undefined:((typeof props === 'object') ? props : {applicationPackage:props}));
+		var initialized = false;
+		var onDomReady = function(){
+			if (!props) {
+				var str = 'CreateApplication requires at least one parameter:\n\na5.cl.CreateApplication("app");';
 				a5.cl.core.Utils.generateSystemHTMLTemplate(500, str, true);
 				throw str;
 			} else {
 				if (!initialized) {
+					a5.cl._cl_appCreated = true;
+					a5.cl.Mappings = a5.cl.Filters = 
+					a5.cl.AppParams = a5.cl.Config = 
+					a5.cl.CreateCallback =
+					a5.cl.BootStrap = function(){
+						a5.cl.core.Utils.generateSystemHTMLTemplate(500, "Invalid call to CL configuration method: methods must be called prior to application launch", true);
+					}
 					a5.Create(a5.cl.CL, [props])
 					initialized = true;
 					for(var i = 0, l = a5.cl._cl_createCallbacks.length; i<l; i++)
@@ -2287,9 +2295,9 @@ a5.cl.CreateApplication = function(props, callback){
 					a5.cl._cl_createCallbacks = null;
 				}
 			}
-		},
+		}
 	
-		domContentLoaded = function(){
+		var domContentLoaded = function(){
 			if (document.addEventListener) {
 				document.removeEventListener( "DOMContentLoaded", domContentLoaded, false);
 				onDomReady();
@@ -2316,12 +2324,51 @@ a5.cl.CreateApplication = function(props, callback){
 	}
 }
 
+a5.cl._cl_appCreated = false;
+
+a5.cl._cl_storedCfgs = { mappings:[], filters:[], config:[], appParams:{}, pluginConfigs:[], bootStrap:null };
+
 a5.cl._cl_createCallbacks = [];
 
 a5.cl.CreateCallback = function(callback){
 	a5.cl._cl_createCallbacks.push(callback);
 }
+/**
+ * 
+ * @param {Array} array
+ */
+a5.cl.Mappings = function(array){ a5.cl._cl_storedCfgs.mappings = array; }
 
+/**
+ * 
+ * @param {Array} array
+ */
+a5.cl.Filters = function(array){ a5.cl._cl_storedCfgs.filters = array; }
+
+/**
+ * 
+ * @param {Object} obj
+ */
+a5.cl.AppParams = function(obj){ a5.cl._cl_storedCfgs.appParams = obj; }
+
+/**
+ * 
+ * @param {Object} obj
+ */
+a5.cl.Config = function(obj){ a5.cl._cl_storedCfgs.config = obj; }
+
+/**
+ * 
+ * @param {string} namespace
+ * @param {Object} obj
+ */
+a5.cl.PluginConfig = function(namespace, obj){ a5.cl._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
+
+/**
+ * 
+ * @param {Function} func
+ */
+a5.cl.BootStrap = function(func){ a5.cl._cl_storedCfgs.bootStrap = func; }
 
 
 
@@ -3250,8 +3297,8 @@ a5.Package('a5.cl.core')
 		}
 		
 		this.instantiateConfiguration = function(){
-			var retObj = a5.cl.CLMain._cl_storedCfgs.config;
-			var plgnArray = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
+			var retObj = a5.cl._cl_storedCfgs.config;
+			var plgnArray = a5.cl._cl_storedCfgs.pluginConfigs;
 			for (var i = 0; i < plgnArray.length; i++) {
 				var obj = {};
 				var split = plgnArray[i].nm.split('.'),
@@ -5439,7 +5486,7 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_sourceConfig = function(){
-			var cfg = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
+			var cfg = a5.cl._cl_storedCfgs.pluginConfigs;
 			var pkg = this.classPackage();
 			if(String(pkg[pkg.length-1]).toLowerCase() != this.className().toLowerCase())
 						pkg = pkg + '.' + this.constructor.className();
@@ -5483,16 +5530,6 @@ a5.Package('a5.cl')
 			return false;
 		}
 		
-		proto.createMainConfigMethod = function(type){
-			a5.cl.CLMain.prototype['set' + type.substr(0, 1).toUpperCase() + type.substr(1)] = function(){
-				a5.cl.CLMain._cl_storedCfgs[type] = Array.prototype.slice.call(arguments);
-			}
-		}
-		
-		proto.getMainConfigProps = function(type){
-			return a5.cl.CLMain._cl_storedCfgs[type];
-		}
-		
 		proto.registerAutoInstantiate = function(){
 			a5.cl.core.Instantiator.instance().registerAutoInstantiate.apply(null, arguments);
 		}
@@ -5515,7 +5552,6 @@ a5.Package("a5.cl")
 	
 		var _params,
 			_config,
-			_main,
 			core;
 		
 		this._cl_plugins = {};
@@ -5523,10 +5559,6 @@ a5.Package("a5.cl")
 		this.CL = function(params){
 			self.superclass(this);
 			_params = params;
-			if(a5.cl.CLMain._extenderRef.length)
-				_main = self.create(a5.cl.CLMain._extenderRef[0], [self]);
-			if(!params.applicationPackage)
-				params.applicationPackage = _main.classPackage();
 			core = self.create(a5.cl.core.Core, [params.applicationPackage]);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
 			_config = core.instantiator().createConfig(_config);
@@ -5544,7 +5576,7 @@ a5.Package("a5.cl")
 		/**
 		 *
 		 */
-		this.Override.appParams = function(){	return a5.cl.CLMain._cl_storedCfgs.appParams; }
+		this.Override.appParams = function(){	return a5.cl._cl_storedCfgs.appParams; }
 
 		/**
 		 *
@@ -5671,90 +5703,368 @@ a5.Package("a5.cl")
 });
 
 
-a5.Package('a5.cl')
-
-	.Extends('CLBase')
-	.Static(function(CLMain){
-		CLMain._cl_storedCfgs = {config:[], appParams:{}, pluginConfigs:[]};
-	})
-	.Prototype('CLMain', 'abstract', function(proto, im, CLMain){
-		
-		proto.CLMain = function(){
-			proto.superclass(this);
-			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
-			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
-			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
-			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
-			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
-			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
-		}
-		
-		/**
-		 * 
-		 * @param {Object} obj
-		 */
-		proto.setAppParams = function(obj){ CLMain._cl_storedCfgs.appParams = obj; }
-		
-		/**
-		 * 
-		 * @param {Object} obj
-		 */
-		proto.setConfig = function(obj){ CLMain._cl_storedCfgs.config = obj; }
-		
-		/**
-		 * 
-		 * @param {string} namespace
-		 * @param {Object} obj
-		 */
-		proto.setPluginConfig = function(namespace, obj){ proto._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
-		
-		/**
-		 * @name onlineStatusChanged
-		 * @description Called by the framework when the browser's online status has changed. This is equivalent to listening for {@link a5.cl.MVC.event:ONLINE_STATUS_CHANGE}.
-		 */
-		proto.onlineStatusChanged = function(isOnline){}
-		
-		/**
-		 * @name autoInstantiationComplete 
-		 * @description Called by the framework when auto detected classes have been successfully instantiated.
-		 */
-		proto.autoInstantiationComplete = function(){}
-		
-		/**
-		 * @name applicationWillLaunch 
-		 * @description Called by the framework when the application is about to launch.
-		 */
-		proto.applicationWillLaunch = function(){}
-		
-		/**
-		 * @name applicationLaunched 
-		 * @description Called by the framework when the application has successfully launched.
-		 */
-		proto.applicationLaunched = function(){}
-		
-		/**
-		 * @name applicationWillClose
-		 * @description Called by the framework when the window is about to be closed. This method is tied to
-		 * the onbeforeunload event in the window, and as such can additionally return back a custom string value to throw in a confirm
-		 * dialogue and allow the user to cancel the window close if desired.
-		 */
-		proto.applicationWillClose = function(){
-			
-		}
-		
-		/**
-		 * @name applicationClosed
-		 * @description Called by the framework when the window is closing.
-		 */
-		proto.applicationClosed = function(){}
-		
-		/**
-		 * @name applicationWillRelaunch
-		 * @description Called by the framework when the application is about to relaunch.
-		 */
-		proto.applicationWillRelaunch = function(){}
-})	
-
-
-
 })(this);
+
+
+a5.Package('a5.cl')
+	
+	.Extends('a5.cl.CLBase')
+	.Static(function(CLUnitTest){
+		
+		CLUnitTest.COMPLETE = 'a5_cl_testing_complete';
+		
+		CLUnitTest._cl_testRef = null;
+		
+		CLUnitTest.testingRef = function(){
+			return CLUnitTest._cl_testRef || a5.cl.testing.Testing();
+		}
+		
+	})
+	.Prototype('CLUnitTest', 'singleton', function(proto, im, CLUnitTest){
+		
+		this.Properties(function(){
+			this._cl_async = false;
+		})
+		
+		proto.CLUnitTest = function(){
+			proto.superclass(this);
+		}
+		
+		proto.asyncTest = function(){
+			this._cl_async = true;
+		}
+		
+		proto.runTest = function(){
+			if(this.runTest === proto.runTest)
+				this.error('runTest method not implemented on CLUnitTest class ' + this.namespace());
+		}
+		
+		proto.Override.assert = function(check, response){
+			proto.superclass().assert.call(this, check, this.className() + " Assertion Failure: " + response)
+		}
+		
+		proto.testComplete = function(){
+			if(this._cl_async == true)
+				this.dispatchEvent(CLUnitTest.COMPLETE);
+		}
+		
+		proto.Override.log = function(value){
+			CLUnitTest.testingRef().log(value);
+		}
+		
+		proto.Override.warn = function(value){
+			CLUnitTest.testingRef().warn(value);
+		}
+		
+		proto.error = function(value){
+			CLUnitTest.testingRef().fail(value);
+		}
+		
+		proto.fail = function(value){
+			CLUnitTest.testingRef().fail(value);
+		}
+
+});
+
+
+a5.Package('a5.cl.testing')
+	
+	.Interface('IResultService', function(cls){
+		
+		cls.sendResults = function(){}
+		
+});
+
+a5.Package('a5.cl.testing.core')
+
+	.Extends('a5.cl.CLBase')
+	.Class('TestFrame', function(cls, im){
+		
+		var testRef,
+			iframe,
+			doc;
+		
+		cls.TestFrame = function($testRef, url){
+			cls.superclass(this);
+			testRef = $testRef;
+			iframe = document.createElement('iframe');
+			iframe.frameBorder = 0;
+			iframe.style.width = iframe.style.height = '0px';
+			iframe.src = url;
+			this.cl().addEventListener(a5.cl.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkFrameDOM, false, this);
+			document.body.appendChild(iframe);
+		}	
+		
+		cls.getA5 = function(){
+			return frameEval('a5');
+		}
+		
+		cls.context = function(){
+			return iframe.contentWindow.window;
+		}
+		
+		var frameEval = function(str){
+			iframe.contentWindow.focus();
+			return iframe.contentWindow.eval(str);
+		}
+		
+		var checkFrameDOM = function(){
+			var isReady = false;
+			try{
+				if(frameEval('"a5" in window') && frameEval('a5.cl') !== undefined)
+					isReady = true;
+			} catch(e){}
+			if(isReady){
+				this.cl().removeEventListener(a5.cl.CLEvent.GLOBAL_UPDATE_TIMER_TICK, checkFrameDOM);
+				this.dispatchEvent('READY');
+			}	
+				
+		}
+		
+})
+
+
+a5.Package('a5.cl.testing')
+	
+	.Import('a5.cl.CLUnitTest')	
+	.Extends('a5.cl.CLAddon')
+	.Class('Testing', function(self, im, Testing){
+		
+		var testCount,
+			totalTests,
+			testRef = [],
+			resultArray = [],
+			consoleWindow,
+			testFrame,
+			lastTestStart,
+			fullTestStart,
+			suiteFail = false,
+			didFail = false,
+			runningTest,
+			interceptCallback,
+			didRun = false;
+			
+		self.Testing = function(){
+			self.superclass(this);
+			self.registerForProcess('logger');
+			self.registerForProcess('launchInterceptor');
+			this.configDefaults({
+				runTests:false,
+				resultCallback:null,
+				logResult:true,
+				iframeURL:null,
+				showConsole:false,
+				runThirdPartyTests:false,
+				restrictEnvironments:null,
+				resultService:null,
+				launchAfterTest:false
+			})
+		}
+		
+		self.initializePlugin = function(){
+			if (self.pluginConfig().resultService) {
+				var svc = a5.GetNamespace(self.pluginConfig().resultService);
+				if (!svc || svc && !svc instanceof a5.cl.CLAjax || !svc.doesImplement('a5.cl.testing.IResultService')) {
+					self.throwError('resultService property on add-on Testing must implement a5.cl.testing.IResultService.');
+					self.pluginConfig().resultService = null;
+					return;
+				}
+			}
+			if(self.pluginConfig().iframeURL){
+				testFrame = self.create(a5.cl.testing.core.TestFrame, [this, self.pluginConfig().iframeURL]);
+				testFrame.addEventListener('READY', function(){
+					prepComplete();
+				})
+			} else {
+				if(a5.GetNamespace(a5.cl.ui) && self.pluginConfig().showConsole === true){
+					consoleWindow = self.create(a5.cl.testing.core.TestingConsole, [this]);
+					self.create('a5.cl.testing.ErrorHandler', [consoleWindow]);
+					self.cl().MVC().addMapping({desc:500, controller:'a5.cl.testing.ErrorHandler', action:'_500'});
+					self.cl().MVC().addMapping({desc:404, controller:'a5.cl.testing.ErrorHandler', action:'_404'});
+					self.cl().MVC().application().addWindow(consoleWindow);
+				}
+				prepComplete();
+			}
+		}
+		
+		var prepComplete = function(){
+			if(self.pluginConfig().runTests === true)
+				self.startTests();
+		}
+		
+		self.interceptLaunch = function(callback){
+			interceptCallback = callback;
+			return true;
+		}	
+		
+		self.log = function(value){
+			showStatus('log', value);
+		}
+		
+		self.error = function(value){
+			showStatus('error', value);
+		}
+		self.fail = function(value){
+			didFail = true;
+			suiteFail = true;
+			showStatus('fail', value);
+			eTestCompleteHandler();
+		}
+		
+		self.warn = function(value){
+			showStatus('warn', value);
+		}
+		
+		self.startTests = function(){	
+			if (!didRun && validateEnvironment()) {
+				didRun = true;
+				fullTestStart = new Date();
+				var appReady = 	function(){
+					var a5ctx = a5;
+					if (testFrame) {
+						a5ctx = testFrame.context().a5;
+						a5ctx.cl.CLUnitTest._cl_testRef = self;
+					}
+					var app = testFrame ? a5ctx.cl.instance().applicationPackage() : self.cl().applicationPackage(),
+						pkg = app['tests'];
+					
+					
+					for(var i = 0, l =a5ctx.cl.CLUnitTest._extenderRef.length; i<l; i++){
+						var clsRef = a5ctx.cl.CLUnitTest._extenderRef[i];
+						if(clsRef.classPackage(true) === pkg)
+							testRef.push(clsRef);
+						else if (self.pluginConfig().runThirdPartyTests === true)
+							testRef.push(clsRef);
+					}		
+
+					totalTests = testRef.length;
+					testCount = 0;
+					resultArray = [];
+					if (totalTests === 0) {
+						self.error('No valid tests present in application.');
+						testComplete();
+					} else {
+						triggerNextTest();
+					}
+				}
+
+				var checkLoadStatus = function(app){
+					state = app.launchState();
+					if (app.launchState() > a5.cl.CLLaunchState.PLUGINS_LOADED) {
+						appReady();
+					} else {
+						app.addOneTimeEventListener(testFrame.context().a5.cl.CLEvent.PLUGINS_LOADED, function(){
+							appReady();
+						})
+					}
+				}
+
+
+				if (testFrame) {
+					var app = testFrame.context().a5.cl.instance();
+					if (app) {
+						checkLoadStatus(app);
+					} else {
+						testFrame.context().a5.cl.CreateCallback(function(app){
+							checkLoadStatus(app);
+						})
+					} 
+				} else {
+					appReady();
+				}
+				
+			}
+		}
+		
+		var showStatus = function(type, value){
+			resultArray.push(type + ': ' + value);
+			if(consoleWindow)
+				consoleWindow.showStatus(type, value);
+			else if(window.console !== undefined)
+				console.log(value);
+			if (!a5.GetNamespace(a5.cl.mvc)) {
+				var elem = document.createElement('div');
+				elem.innerHTML = type + ': ' + value;
+				if(type === 'error' || type === 'fail')
+					elem.style.color = 'red';
+				document.body.appendChild(elem);
+				elem = null;
+			}
+		}
+		
+		var triggerNextTest = function(){
+			if (testCount === totalTests) {
+				testComplete();
+			} else {
+				didFail = false;
+				var testCls = testRef[testCount],
+					ctx = testFrame ? testFrame.context().a5.cl.instance() : self,
+					async;
+				runningTest = ctx.create(testCls.namespace());
+				async = runningTest._cl_async;
+				if(async === true)
+					runningTest.addEventListener(im.CLUnitTest.COMPLETE, eTestCompleteHandler);
+				testCount++;
+				lastTestStart = new Date();
+				try {
+					runningTest.runTest();
+				} catch(e){
+					runningTest.error(e);
+				}
+				if(!async)
+					eTestCompleteHandler();
+			}
+		}
+		
+		var eTestCompleteHandler = function(e){
+			var time = new Date() - lastTestStart;
+			lastTestStart = null;
+			if(!didFail)
+				self.log('Test "' + runningTest.className() + '" completed successfully in ' + time + ' ms.');
+			runningTest.removeEventListener(im.CLUnitTest.COMPLETE, eTestCompleteHandler);
+			runningTest.destroy();
+			triggerNextTest();
+		}
+		
+		var validateEnvironment = function(){
+			if(self.pluginConfig().restrictEnvironments === null){
+				return true;
+			} else {
+				var envs = self.pluginConfig().restrictEnvironments.split('|');
+				for(var i = 0, l = envs.length; i<l; i++)
+					if(envs[i] === self.cl().environment())
+						return true;
+				return false;
+			}
+		}
+		
+		var testComplete = function(){
+			runningTest = null;
+			var totalTime = new Date() - fullTestStart;
+			fullTestStart = null;
+			self.log('Test run completed' + (suiteFail ? ' with failures':'') + ' in ' + totalTime + ' ms.');
+			if (self.pluginConfig().resultCallback && typeof self.pluginConfig().resultCallback === 'function') 
+				self.pluginConfig().resultCallback(results);
+			if (self.pluginConfig().resultService) 
+				sendResultsViaService();
+			if(self.pluginConfig().launchAfterTest === true)
+				interceptCallback();
+		}
+		
+		var sendResultsViaService = function(){
+			var svc = self.create(self.pluginConfig().resultService);
+			svc.sendResults(resultArray);
+		}
+});
+
+a5.cl.PluginConfig('a5.cl.testing.Testing', {
+runTests:true,
+iframeURL:a5.cl.core.Utils.getParameterByName('testURL') || 'index.html'
+})
+
+var app = a5.cl.CreateApplication({
+applicationPackage: 'a5.unitTest'
+});
+</script><body>
+	</body>
+</html>

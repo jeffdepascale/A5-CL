@@ -1,5 +1,5 @@
 lib/A5.js
-src/clMain.js
+src/main.js
 src/CLBase.js
 src/CLError.js
 src/CLWorker.js
@@ -27,3 +27,4 @@ src/CLAjax.js
 src/CLPlugin.js
 src/CLAddon.js
 src/CL.js
+src/CLMain.js

@@ -1,127 +1,84 @@
 
-/** @name a5.cl
- * @namespace Framework classes.
- */
-a5.SetNamespace('a5.cl'); 
+a5.Package('a5.cl')
 
-/**
- * @function
- * @type a5.cl.CL
- * @returns Shortcut to the instance of the A5 CL application.
- */
-a5.cl.instance = function(val){
-	return a5.cl.CL.instance(val);
-}
-
-/**
- * @function
- * Initializes an instance of the A5 CL framework.
- * @param {Object|String} props
- * @param {String} [props.applicationPackage]
- * @param {String|a5.cl.CLApplication} [props.application]
- * @param {String} [props.rootController]
- * @param {String} [props.rootViewDef]
- * @param {String} [props.environment]
- * @param {String} [props.clientEnvironment]
- * @type Function
- * @returns A function that returns the singleton instance of the application framework.
- */
-a5.cl.CreateApplication = function(props){
-	if (!a5.cl._cl_appCreated) {
-		var props = (props === undefined ? undefined:((typeof props === 'object') ? props : {applicationPackage:props}));
-		var initialized = false;
-		var onDomReady = function(){
-			if (!props) {
-				var str = 'CreateApplication requires at least one parameter:\n\na5.cl.CreateApplication("app");';
-				a5.cl.core.Utils.generateSystemHTMLTemplate(500, str, true);
-				throw str;
-			} else {
-				if (!initialized) {
-					a5.cl._cl_appCreated = true;
-					a5.cl.Mappings = a5.cl.Filters = 
-					a5.cl.AppParams = a5.cl.Config = 
-					a5.cl.CreateCallback =
-					a5.cl.BootStrap = function(){
-						a5.cl.core.Utils.generateSystemHTMLTemplate(500, "Invalid call to CL configuration method: methods must be called prior to application launch", true);
-					}
-					a5.Create(a5.cl.CL, [props])
-					initialized = true;
-					for(var i = 0, l = a5.cl._cl_createCallbacks.length; i<l; i++)
-						a5.cl._cl_createCallbacks[i](a5.cl.instance());
-					a5.cl._cl_createCallbacks = null;
-				}
-			}
-		}
-	
-		var domContentLoaded = function(){
-			if (document.addEventListener) {
-				document.removeEventListener( "DOMContentLoaded", domContentLoaded, false);
-				onDomReady();
-			} else if ( document.attachEvent ) {
-				if ( document.readyState === "complete" ) {
-					document.detachEvent("onreadystatechange", domContentLoaded);
-					onDomReady();
-				}
-			}
+	.Extends('CLBase')
+	.Static(function(CLMain){
+		CLMain._cl_storedCfgs = {config:[], appParams:{}, pluginConfigs:[]};
+	})
+	.Prototype('CLMain', 'abstract', function(proto, im, CLMain){
+		
+		proto.CLMain = function(){
+			proto.superclass(this);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
+			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
+			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
+			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
 		}
 		
-		if (document.readyState === "complete") {
-			onDomReady();
-		} else if (document.addEventListener) {
-			document.addEventListener("DOMContentLoaded", domContentLoaded, false);
-		} else if (document.attachEvent) {
-			document.attachEvent("onreadystatechange", domContentLoaded);
+		/**
+		 * 
+		 * @param {Object} obj
+		 */
+		proto.setAppParams = function(obj){ CLMain._cl_storedCfgs.appParams = obj; }
+		
+		/**
+		 * 
+		 * @param {Object} obj
+		 */
+		proto.setConfig = function(obj){ CLMain._cl_storedCfgs.config = obj; }
+		
+		/**
+		 * 
+		 * @param {string} namespace
+		 * @param {Object} obj
+		 */
+		proto.setPluginConfig = function(namespace, obj){ proto._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
+		
+		/**
+		 * @name onlineStatusChanged
+		 * @description Called by the framework when the browser's online status has changed. This is equivalent to listening for {@link a5.cl.MVC.event:ONLINE_STATUS_CHANGE}.
+		 */
+		proto.onlineStatusChanged = function(isOnline){}
+		
+		/**
+		 * @name autoInstantiationComplete 
+		 * @description Called by the framework when auto detected classes have been successfully instantiated.
+		 */
+		proto.autoInstantiationComplete = function(){}
+		
+		/**
+		 * @name applicationWillLaunch 
+		 * @description Called by the framework when the application is about to launch.
+		 */
+		proto.applicationWillLaunch = function(){}
+		
+		/**
+		 * @name applicationLaunched 
+		 * @description Called by the framework when the application has successfully launched.
+		 */
+		proto.applicationLaunched = function(){}
+		
+		/**
+		 * @name applicationWillClose
+		 * @description Called by the framework when the window is about to be closed. This method is tied to
+		 * the onbeforeunload event in the window, and as such can additionally return back a custom string value to throw in a confirm
+		 * dialogue and allow the user to cancel the window close if desired.
+		 */
+		proto.applicationWillClose = function(){
+			
 		}
-		return function(){
-			return a5.cl.CL.instance();
-		}
-	} else {
-		throw "Error: a5.cl.CreateApplication can only be called once.";
-	}
-}
-
-a5.cl._cl_appCreated = false;
-
-a5.cl._cl_storedCfgs = { mappings:[], filters:[], config:[], appParams:{}, pluginConfigs:[], bootStrap:null };
-
-a5.cl._cl_createCallbacks = [];
-
-a5.cl.CreateCallback = function(callback){
-	a5.cl._cl_createCallbacks.push(callback);
-}
-/**
- * 
- * @param {Array} array
- */
-a5.cl.Mappings = function(array){ a5.cl._cl_storedCfgs.mappings = array; }
-
-/**
- * 
- * @param {Array} array
- */
-a5.cl.Filters = function(array){ a5.cl._cl_storedCfgs.filters = array; }
-
-/**
- * 
- * @param {Object} obj
- */
-a5.cl.AppParams = function(obj){ a5.cl._cl_storedCfgs.appParams = obj; }
-
-/**
- * 
- * @param {Object} obj
- */
-a5.cl.Config = function(obj){ a5.cl._cl_storedCfgs.config = obj; }
-
-/**
- * 
- * @param {string} namespace
- * @param {Object} obj
- */
-a5.cl.PluginConfig = function(namespace, obj){ a5.cl._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
-
-/**
- * 
- * @param {Function} func
- */
-a5.cl.BootStrap = function(func){ a5.cl._cl_storedCfgs.bootStrap = func; }
+		
+		/**
+		 * @name applicationClosed
+		 * @description Called by the framework when the window is closing.
+		 */
+		proto.applicationClosed = function(){}
+		
+		/**
+		 * @name applicationWillRelaunch
+		 * @description Called by the framework when the application is about to relaunch.
+		 */
+		proto.applicationWillRelaunch = function(){}
+})	

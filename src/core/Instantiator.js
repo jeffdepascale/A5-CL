@@ -53,8 +53,8 @@ a5.Package('a5.cl.core')
 		}
 		
 		this.instantiateConfiguration = function(){
-			var retObj = a5.cl._cl_storedCfgs.config;
-			var plgnArray = a5.cl._cl_storedCfgs.pluginConfigs;
+			var retObj = a5.cl.CLMain._cl_storedCfgs.config;
+			var plgnArray = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
 			for (var i = 0; i < plgnArray.length; i++) {
 				var obj = {};
 				var split = plgnArray[i].nm.split('.'),

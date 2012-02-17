@@ -80,7 +80,7 @@ a5.Package('a5.cl')
 		}
 		
 		proto._cl_sourceConfig = function(){
-			var cfg = a5.cl._cl_storedCfgs.pluginConfigs;
+			var cfg = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
 			var pkg = this.classPackage();
 			if(String(pkg[pkg.length-1]).toLowerCase() != this.className().toLowerCase())
 						pkg = pkg + '.' + this.constructor.className();

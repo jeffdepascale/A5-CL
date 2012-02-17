@@ -10,6 +10,7 @@ a5.Package("a5.cl")
 	
 		var _params,
 			_config,
+			_main,
 			core;
 		
 		this._cl_plugins = {};
@@ -17,6 +18,10 @@ a5.Package("a5.cl")
 		this.CL = function(params){
 			self.superclass(this);
 			_params = params;
+			if(a5.cl.CLMain._extenderRef.length)
+				_main = self.create(a5.cl.CLMain._extenderRef[0], [self]);
+			if(!params.applicationPackage)
+				params.applicationPackage = _main.classPackage();
 			core = self.create(a5.cl.core.Core, [params.applicationPackage]);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
 			_config = core.instantiator().createConfig(_config);
@@ -34,7 +39,7 @@ a5.Package("a5.cl")
 		/**
 		 *
 		 */
-		this.Override.appParams = function(){	return a5.cl._cl_storedCfgs.appParams; }
+		this.Override.appParams = function(){	return a5.cl.CLMain._cl_storedCfgs.appParams; }
 
 		/**
 		 *
