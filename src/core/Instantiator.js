@@ -27,14 +27,12 @@ a5.Package('a5.cl.core')
 		this.Override.getClassInstance = function(type, className, instantiate){
 			var instance = null,
 			namespace = null;
-			try{
-				if(className.indexOf('.') !== -1)
-					namespace = a5.GetNamespace(className);
-				else 
-					namespace = getClassNamespace(type, className);
-				if(namespace)
-					instance = namespace.instance(!!instantiate);
-			}catch(e){}
+			if(className.indexOf('.') !== -1)
+				namespace = a5.GetNamespace(className);
+			else 
+				namespace = getClassNamespace(type, className);
+			if(namespace)
+				instance = namespace.instance(!!instantiate);
 			return instance;
 		}
 		

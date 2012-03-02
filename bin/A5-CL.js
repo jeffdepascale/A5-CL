@@ -588,9 +588,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 					extender.prototype = proxy;
 					proxy = null;	
 				} else
-					extender.prototype = new base();
-				if(base.namespace && base.isSingleton())
-					isSingleton = true;				
+					extender.prototype = new base();			
 				superclass = base;
 			} else
 				return a5.ThrowError('Cannot extend ' + base.namespace() + ', class marked as final.');
@@ -738,7 +736,9 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			} else
 				a5.ThrowError(205, null, {nm:obj.namespace()});
 			delete obj._mixinDef.Properties;
+			delete obj._mixinDef.Contract;
 			delete obj._mixinDef.MustExtend;
+			delete obj._mixinDef.MustMix;
 		}
 		if (!fromQueue) processQueue();
 	},
@@ -914,6 +914,10 @@ a5.SetNamespace('a5.core.classProxyObj',{
 		_a5_ar:{},
 		isA5:true,
 		isA5ClassDef:function(){ return false },
+		
+		getStatic:function(){
+			return this.constructor;
+		},
 		
 		autoRelease:function(value){
 			if(value !== undefined){
@@ -1378,7 +1382,9 @@ a5.SetNamespace('a5.core.mixins', {
 			i, l, mixin;
 			
 		for (i = 0, l = mixins.length; i < l; i++) {
-			mixin = a5.GetNamespace(mixins[i], imports());
+			mixin = a5.GetNamespace(mixins[i], typeof imports === 'function' ? imports() : imports);
+			if(!mixin)
+				return a5.ThrowError(404, null, {mixin:mixins[i]});
 			mixinInsts.push(mixin);
 			for (i = 0; i < sourceObj.constructor._mixinRef.length; i++)
 				if (sourceObj.constructor._mixinRef[i] === mixin)
@@ -2224,6 +2230,7 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	401:'Mixin "{nm}" requires owner class to mix "{cls}".',
 	402:'Mixin "{nm}" already mixed into ancestor chain.',
 	403:'Invalid mixin: Method "{method}" defined by more than one specified mixin.',
+	404:'Invalid mixin: Mixin "{mixin}" does not exist.',
 	
 	//600: Contract
 	601:'Invalid implementation of Contract on interace {intNM} in class {implNM} for method {method}.'
@@ -2349,16 +2356,6 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * Returns the name value of the class if known, else it returns the instanceUID value.
-		 * @name mvcName
-		 * @type String
-		 */
-		proto.mvcName = function(){
-			return this._cl_mvcName || this.instanceUID();
-		}
-		
-		
-		/**
 		 * @name cl
 		 * @return
 		 * @type a5.cl.MVC#
@@ -2398,32 +2395,6 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
-		/**
-		 * The redirect method throws a control change to A5 CL.
-		 * @name redirect
-		 * @param {Object|String|Array|Number} params Numbers are explicitly parsed as errors. String parsed as location redirect if is a url, otherwise processed as a hash change.
-		 * @param {String|Array} [param.hash] A string value to pass as a hash change. 
-		 * @param {String} [param.url] A string value to pass as a location redirect. 
-		 * @param {String} [param.controller] A string value referencing the name of a controller to throw control to, defaulting to the index method of the controller. 
-		 * @param {String} [param.action] A string value of the name of the method action to call. 
-		 * @param {Array} [param.id] An array of parameters to pass to the action method. 
-		 * @param {String|Array} [param.forceHash] A string to set the hash value to. Note that unlike standard hash changes, forceHash will not be parsed as a mappings change and is strictly for allowing finer control over the address bar value.
-		 * @param {String} [info] For errors only, a second parameter info is used to pass custom error info to the error controller. 
-		 */
-		proto.redirect = function(params, info, forceRedirect){
-			if(this.cl()._core().locationManager()){
-				return this.cl()._core().locationManager().redirect(params, info, forceRedirect);
-			} else {
-				if(params === 500){
-					var isError = info instanceof a5.Error;
-					if(isError && !info.isWindowError())
-						this.throwError(info);
-					else
-						throw info;
-				}
-			}
-		}
-		
 		proto.Override.throwError = function(error){
 			proto.superclass().throwError(error, a5.cl.CLError);
 		}
@@ -2449,10 +2420,6 @@ a5.Package('a5.cl')
 		 */
 		proto.appParams = function(){
 			return this.cl().appParams();
-		}
-		
-		proto._cl_setMVCName = function(name){
-			this._cl_mvcName = name;
 		}
 });
 
@@ -2491,7 +2458,7 @@ a5.Package('a5.cl')
 		proto.CLWorker = function(isWorker){
 			proto.superclass(this);
 			if(this.isSingleton())
-				this.redirect(500, "Workers cannot be singletons.");
+				this.throwError("Workers cannot be singletons.");
 			this._cl_communicator = null;
 			this._cl_JSON = a5.cl.core.JSON || JSON;
 			this._cl_isWorker = (isWorker === '_cl_isWorkerInitializer');
@@ -2526,7 +2493,7 @@ a5.Package('a5.cl')
 					if (obj.log) {
 						self.log(obj.log);
 					} else if (obj.error) {
-						self.redirect(500, obj.error);
+						self.throwError(obj.error);
 					} else {
 						var method = null;
 						try {
@@ -2570,7 +2537,7 @@ a5.Package('a5.cl')
 					data: data
 				});
 			} else {
-				self.redirect(500, 'Cannot call createWorker from worker methods.');
+				self.throwError('Cannot call createWorker from worker methods.');
 			}
 		}
 		
@@ -2926,9 +2893,6 @@ a5.Package('a5.cl.core')
 				plugins[i].initializePlugin();
 					
 			}
-			a5.cl.PluginConfig = function(){
-				self.throwError(self.create(a5.cl.CLError, ['Invalid call to MVC pluginConfig method: method must be called prior to plugin load.']));
-			}
 		}
 		
 		this.defineRegisterableProcess = function(process){
@@ -2952,7 +2916,7 @@ a5.Package('a5.cl.core')
 		this.processAddons = function(callback){
 			var count = 0,
 			processAddon = function(){
-				if (count >= addOns.length - 1) {
+				if (count >= addOns.length) {
 					callback();
 				} else {
 					var addOn = addOns[count].instance(),
@@ -3224,14 +3188,12 @@ a5.Package('a5.cl.core')
 		this.Override.getClassInstance = function(type, className, instantiate){
 			var instance = null,
 			namespace = null;
-			try{
-				if(className.indexOf('.') !== -1)
-					namespace = a5.GetNamespace(className);
-				else 
-					namespace = getClassNamespace(type, className);
-				if(namespace)
-					instance = namespace.instance(!!instantiate);
-			}catch(e){}
+			if(className.indexOf('.') !== -1)
+				namespace = a5.GetNamespace(className);
+			else 
+				namespace = getClassNamespace(type, className);
+			if(namespace)
+				instance = namespace.instance(!!instantiate);
 			return instance;
 		}
 		
@@ -5051,6 +5013,108 @@ a5.Package('a5.cl.mixins')
 });	
 
 
+a5.Package('a5.cl.mixins')
+	.Mixin('BindableSource', function(mixin, im){
+		
+		mixin.BindableSource = function(){
+			this._cl_receivers = [];
+			this._cl_paramType = null;
+			this._cl_paramRequired = false;
+		}
+		
+		mixin.paramType = function(type){
+			if (type) {
+				this._cl_paramType = type;
+				return this;
+			}
+			return this._cl_paramType;
+		}
+		
+		mixin.paramRequired = function(value){
+			if (value) {
+				this._cl_paramRequired = value;
+				return this;
+			}
+			return this._cl_paramRequired;
+		}
+		
+		mixin.updateBinds = function(data){
+			this.notifyReceivers(data);
+		}
+		
+		mixin.attachReceiver = function(receiver, params, mapping, scope){
+			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
+			this.updateBinds();
+		}
+		
+		mixin.notifyReceivers = function(data){
+			if (this._cl_paramRequired === true) {
+				this.throwError('cannot call notifyReceivers on mixed class "' + this.namespace() + '", paramRequired bind sources must call notifyFromParams.');
+			} else {
+				for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
+					var r = this._cl_receivers[i];
+					r.receiver.call(r.scope, this._cl_modifyBindData(data, r.mapping))
+				}
+			}
+		}
+		
+		mixin.notifyFromParams = function(callback){
+			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
+				var r = this._cl_receivers[i];
+				var result = callback(r.params);
+				if(result !== null)
+					r.receiver.call(r.scope, this._cl_modifyBindData(result, r.mapping));
+			}
+		}
+		
+		mixin.detachReceiver = function(receiver){
+			for(var i = 0, l = this._cl_receivers.length; i<l; i++){
+				var r = this._cl_receivers[i];
+				if(r.receiver === receiver){
+					this._cl_receivers.splice(i, 1);
+					break;
+				}
+			}
+		}
+		
+		mixin._cl_modifyBindData = function(dataSource, mapping){
+			var data,
+				isQuery = false;
+			if(dataSource instanceof a5.cl.CLQueryResult)
+				isQuery = true;
+			if(isQuery)
+				data = dataSource._cl_data;
+			else 
+				data = dataSource;
+			if(mapping){
+				var dataSet = [],
+					skipProps = {};
+				for (var i = 0, l = data.length; i < l; i++) {
+					var dataRow = {};
+					for (var prop in mapping) {
+						dataRow[prop] = data[i][mapping[prop]];
+						skipProps[mapping[prop]] = prop;
+					}
+					for(var prop in data[i])
+						if(skipProps[prop] === undefined)
+							dataRow[prop] = data[i][prop];
+					dataSet.push(dataRow);
+				}
+				if (isQuery) {
+					dataSource._cl_data = dataSet;
+					return dataSource;
+				} else {
+					return dataSet;
+				}
+			} else {
+				return dataSource;
+			}
+		}
+				
+});
+
+
+
 /**
  * @class Base class for service handlers in the AirFrame CL framework.
  * <br/><b>Abstract</b>
@@ -5445,7 +5509,7 @@ a5.Package('a5.cl')
 						pkg = pkg + '.' + this.constructor.className();
 			for (var prop in cfg){
 				var pluginCfg = cfg[prop];
-				 if(pluginCfg.nm && pluginCfg.nm == pkg)
+				 if(pluginCfg.nm && (pluginCfg.nm === pkg || pluginCfg.nm === this.constructor.className()))
 				 	return pluginCfg.obj;
 			}
 			return {};
@@ -5681,9 +5745,14 @@ a5.Package('a5.cl')
 		
 		proto.CLMain = function(){
 			proto.superclass(this);
+			if(CLMain._extenderRef.length > 1)
+				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid class "' + this.namespace() + '", a5.cl.CLMain must only be extended by one subclass.']))
+			if(this.getStatic().instanceCount() > 1)
+				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid duplicate instance of a5.cl.CLMain subclass "' + this.getStatic().namespace() + '"']));
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
+			proto.cl().addOneTimeEventListener(im.CLEvent.PLUGINS_LOADED, this.pluginsLoaded);
 			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
@@ -5706,8 +5775,12 @@ a5.Package('a5.cl')
 		 * @param {string} namespace
 		 * @param {Object} obj
 		 */
-		proto.setPluginConfig = function(namespace, obj){ proto._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
+		proto.setPluginConfig = function(namespace, obj){ CLMain._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
 		
+		/**
+		 * 
+		 */
+		proto.pluginsLoaded = function(){}
 		/**
 		 * @name onlineStatusChanged
 		 * @description Called by the framework when the browser's online status has changed. This is equivalent to listening for {@link a5.cl.MVC.event:ONLINE_STATUS_CHANGE}.

@@ -21,6 +21,7 @@ src/core/ResourceCache.js
 src/core/GlobalUpdateTimer.js
 src/core/Core.js
 src/mixins/DataStore.js
+src/mixins/BindableSource.js
 src/CLService.js
 src/CLSocket.js
 src/CLAjax.js

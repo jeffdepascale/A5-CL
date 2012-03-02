@@ -86,7 +86,7 @@ a5.Package('a5.cl')
 						pkg = pkg + '.' + this.constructor.className();
 			for (var prop in cfg){
 				var pluginCfg = cfg[prop];
-				 if(pluginCfg.nm && pluginCfg.nm == pkg)
+				 if(pluginCfg.nm && (pluginCfg.nm === pkg || pluginCfg.nm === this.constructor.className()))
 				 	return pluginCfg.obj;
 			}
 			return {};

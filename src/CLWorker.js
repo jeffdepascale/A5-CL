@@ -18,7 +18,7 @@ a5.Package('a5.cl')
 		proto.CLWorker = function(isWorker){
 			proto.superclass(this);
 			if(this.isSingleton())
-				this.redirect(500, "Workers cannot be singletons.");
+				this.throwError("Workers cannot be singletons.");
 			this._cl_communicator = null;
 			this._cl_JSON = a5.cl.core.JSON || JSON;
 			this._cl_isWorker = (isWorker === '_cl_isWorkerInitializer');
@@ -53,7 +53,7 @@ a5.Package('a5.cl')
 					if (obj.log) {
 						self.log(obj.log);
 					} else if (obj.error) {
-						self.redirect(500, obj.error);
+						self.throwError(obj.error);
 					} else {
 						var method = null;
 						try {
@@ -97,7 +97,7 @@ a5.Package('a5.cl')
 					data: data
 				});
 			} else {
-				self.redirect(500, 'Cannot call createWorker from worker methods.');
+				self.throwError('Cannot call createWorker from worker methods.');
 			}
 		}
 		
