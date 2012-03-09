@@ -243,6 +243,7 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 			attributes[i] = [arr[0], vals];
 			attrObj[arr[0].className()] = vals;
 		}
+		attrObj.wrappedMethod = method;
 			
 		var proxyFunc = function(){
 			var callOriginator,
@@ -280,8 +281,7 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 					isAsync = false,
 					callback = function(_args){
 						processCB.call(this, _args || args, isPost);	
-					}			
-				callback.prop = prop;
+					}	
 					ret = attrClasses[id].cls["method" + (isPost ? "Post" : "Pre")](attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator);
 				if (ret !== null && ret !== undefined) {
 					switch(ret){
@@ -5409,7 +5409,6 @@ a5.Package('a5.cl')
 		proto.CLAjax = function(){
 			proto.superclass(this);
 			this._cl_ajaxStruct = null;
-			this._cl_cycledCalls = {};
 			this._cl_silent = false;
 		}
 		
@@ -5462,15 +5461,6 @@ a5.Package('a5.cl')
 			return a5.cl.core.RequestManager.instance().makeRequest(props);
 		}
 		
-		proto.createCycledCall = function(m, data, delay, callback, props){
-			
-		}
-		
-		/*
-		proto.cancelCycledCall = this.Attributes(["a5.Contracts", {id:'number'}], function(){
-			
-		})*/
-		
 		/**
 		 * Aborts all calls associated with the service.
 		 * @name abort
@@ -5496,10 +5486,15 @@ a5.Package('a5.cl')
 a5.Package('a5.cl')
 
 	.Extends('a5.Attribute')
-	.Class('AjaxCall', function(cls, im, ServiceCall){
+	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
 		
-		cls.AjaxCall = function(){
+		AjaxCallAttribute.CANCEL_CYCLE	= 'ajaxCallAttributeCancelCycle';
+		
+		var cycledCalls = {};
+		
+		cls.AjaxCallAttribute = function(){
 			cls.superclass(this);
+			
 		}
 		
 		cls.Override.methodPre = function(rules, args, scope, method, callback){
@@ -5507,18 +5502,52 @@ a5.Package('a5.cl')
 			var data = null,
 				rules = rules.length ? rules[0] : {},
 				propObj = null;
-			if (rules.takesData === true && args.length) {
+			if (rules.takesData === true && args.length)
 				data = args.shift();
-				delete rules.takesData;
+			var executeCall = function(){
+				scope.call(method.getName(), data, function(response){
+					args.unshift(response);
+					callback(args);
+				}, (rules && rules.length ? rules[0] : null));
 			}
-
-			scope.call(method.getName(), data, function(response){
-				args.unshift(response);
-				callback(args);
-			}, (rules && rules.length ? rules[0] : null));
+			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
+				if (method._cl_cycleID) {
+					clearInterval(method._cl_cycleID);
+					delete method._cl_cycleID;
+				}
+				return a5.Attribute.ASYNC;
+			}
+			if (rules.cycle) {
+				if (!method._cl_cycleID) {
+					method._cl_cycleID = setInterval(function(){
+						method.apply(scope, args);
+					}, rules.cycle);
+					executeCall();
+				} else {
+					executeCall();
+				}
+			} else {
+				executeCall();
+			}
 			return a5.Attribute.ASYNC;
 		}	
 })
+
+a5.Package('a5.cl')
+
+	.Extends('a5.Attribute')
+	.Class('BoundAjaxReturnAttribute', function(cls){
+		
+		cls.BoundAjaxReturnAttribute = function(){
+			cls.superclass(this);
+		}
+		
+		cls.Override.methodPost = function(rules, args, scope, method, callback){
+			scope.notifyReceivers(args[0]);
+			return a5.Attribute.SUCCESS;
+		}
+	})
+
 
 
 /**
