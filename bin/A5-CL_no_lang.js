@@ -572,6 +572,14 @@ a5.Package('a5.cl.interfaces')
 
 
 
+a5.Package('a5.cl.interfaces')
+	
+	.Interface('IBindableReceiver', function(cls){
+		
+		cls.receiveBindData = function(){}
+});
+
+
 a5.Package('a5.cl.core')
 
 	.Extends('a5.cl.CLBase')
@@ -652,6 +660,9 @@ a5.Package('a5.cl.core')
 				plugins[i].initializePlugin();
 					
 			}
+			a5.cl.PluginConfig = function(){
+				self.throwError(self.create(a5.cl.CLError, ['Invalid call to MVC pluginConfig method: method must be called prior to plugin load.']));
+			}
 		}
 		
 		this.defineRegisterableProcess = function(process){
@@ -677,6 +688,7 @@ a5.Package('a5.cl.core')
 			processAddon = function(){
 				if (count >= addOns.length) {
 					callback();
+					return;
 				} else {
 					var addOn = addOns[count].instance(),
 						isAsync = addOn.initializeAddOn() === true;
@@ -2777,56 +2789,42 @@ a5.Package('a5.cl.mixins')
 		
 		mixin.BindableSource = function(){
 			this._cl_receivers = [];
-			this._cl_paramType = null;
-			this._cl_paramRequired = false;
+			this._cl_bindParamType = null;
+			this._cl_bindParamRequired = false;
+			this._cl_bindParamCallback = null;
 		}
 		
-		mixin.paramType = function(type){
-			if (type) {
-				this._cl_paramType = type;
-				return this;
-			}
-			return this._cl_paramType;
+		mixin.bindParamProps = function(type, required, callback){
+			this._cl_bindParamType = type;
+			if(required !== undefined) this._cl_bindParamRequired = required;
+			if(callback !== undefined) this._cl_bindParamCallback = callback;
+			return this;
 		}
 		
-		mixin.paramRequired = function(value){
-			if (value) {
-				this._cl_paramRequired = value;
-				return this;
-			}
-			return this._cl_paramRequired;
+		mixin.bindParamType = function(){
+			return this._cl_bindParamType;
 		}
 		
-		mixin.updateBinds = function(data){
-			this.notifyReceivers(data);
+		mixin.bindParamRequired = function(){
+			return this._cl_bindParamRequired;
 		}
 		
-		mixin.attachReceiver = function(receiver, params, mapping, scope){
-			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
-			this.updateBinds();
-		}
-		
-		mixin.notifyReceivers = function(data){
-			if (this._cl_paramRequired === true) {
-				this.throwError('cannot call notifyReceivers on mixed class "' + this.namespace() + '", paramRequired bind sources must call notifyFromParams.');
-			} else {
-				for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
-					var r = this._cl_receivers[i];
-					r.receiver.call(r.scope, this._cl_modifyBindData(data, r.mapping))
-				}
-			}
-		}
-		
-		mixin.notifyFromParams = function(callback){
+		mixin.notifyReceivers = function(data){	
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
-				var result = callback(r.params);
-				if(result !== null)
-					r.receiver.call(r.scope, this._cl_modifyBindData(result, r.mapping));
+				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
+					data = this._cl_bindParamCallback.call(this, r.params);
+				if(data !== null)
+					r.receiver.receiveBindData.call(r.scope, this._cl_modifyBindData(data, r.mapping));
 			}
 		}
 		
-		mixin.detachReceiver = function(receiver){
+		mixin._cl_attachReceiver = function(receiver, params, mapping, scope){
+			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
+			this.notifyReceivers();
+		}
+		
+		mixin._cl_detachReceiver = function(receiver){
 			for(var i = 0, l = this._cl_receivers.length; i<l; i++){
 				var r = this._cl_receivers[i];
 				if(r.receiver === receiver){
@@ -2835,7 +2833,7 @@ a5.Package('a5.cl.mixins')
 				}
 			}
 		}
-		
+
 		mixin._cl_modifyBindData = function(dataSource, mapping){
 			var data,
 				isQuery = false;
@@ -2872,6 +2870,101 @@ a5.Package('a5.cl.mixins')
 				
 });
 
+
+
+a5.Package('a5.cl.mixins')
+	.Mixin('Binder', function(mixin, im){
+		
+		mixin.Binder = function(){
+			this._cl_bindingsConnected = true;
+			this._cl_bindings = [];
+		}
+		
+		mixin.setBindingEnabled = function(value){
+			if (value !== this._cl_bindingsConnected) {
+				for (var i = 0, l = this._cl_bindings.length; i < l; i++) {
+					var b = this._cl_bindings[i];
+					if (b.persist !== true) {
+						if (value) 
+							b.source._cl_attachReceiver(b.receiver, b.params, b.mapping, b.scope);
+						else b.source._cl_detachReceiver(b.receiver);
+					}
+				}
+				this._cl_bindingsConnected = value;
+			}
+		}
+		
+		mixin.bindingsConnected = function(){
+			return this._cl_bindingsConnected;
+		}
+		
+		mixin.bind = function(source, receiver, params, mapping, scope, persist){
+			if(!this._cl_checkBindExists(source, receiver, params)){
+				if(source.isA5ClassDef())
+					source = source.instance();
+				if (!source.doesMix('a5.cl.mixins.BindableSource'))
+					return this.throwError('source "' + source.className() + '" of bind call must mix a5.cl.mixins.BindableSource.');
+				if(receiver.isA5ClassDef())
+					receiver = receiver.instance();
+				if (!receiver.doesImplement('a5.cl.interfaces.IBindableReceiver'))
+					return this.throwError('receiver "' + receiver.className() + '" of call bind must implement a5.cl.interfaces.IBindableReceiver.');
+				var hasParams = params !== undefined && params !== null,
+					isNM = false,
+					pType = null;
+				if(source.bindParamRequired() || params){
+					var isValid = true;
+				 	if (!hasParams){
+						isValid = false;
+					} else if (source.bindParamType() !== null){
+						pType = source.bindParamType();
+						if(typeof pType === 'string' && pType.indexOf('.') !== -1)
+							pType = a5.GetNamespace(pType);
+						if(pType.namespace){
+							isNM = true;
+							var nmObj = pType.namespace();
+							if(!(params instanceof pType))
+								isValid = false;
+						} else {
+							if(typeof params !== source.bindParamType())
+								isValid = false; 
+						}
+					}
+					if(!isValid){
+						this.throwError('params required for binding source "' + source.namespace() + '"' + (pType !== null ? ' must be of type "' + (isNM ? pType.namespace() : pType) + '"' : ''));
+						return;
+					}
+				}
+				this._cl_bindings.push({source:source, scope:scope, receiver:receiver, mapping:mapping, params:params, persist:persist})
+				if(this.bindingsConnected())
+					source._cl_attachReceiver(receiver, params, mapping, scope);
+			}
+		}
+		
+		mixin.unbind = function(source, receiver){
+			var found = false;
+			for(var i = 0, l = this._cl_bindings.length; i<l; i++){
+				var obj = this._cl_bindings[i];
+				if(obj.source === source && obj.receiver === receiver){
+					this._cl_bindings.splice(i, 1);
+					found = true;
+					break;
+				}
+			}
+			if(found)
+				source._cl_detachReceiver(receiver);
+			else
+				this.throwError('cannot unbind source "' + source.namespace() + '" on controller "' + this.namespace() + '", binding does not exist.');
+		}
+		
+		mixin._cl_checkBindExists = function(source, receiver, params){
+			for(var i = 0, l = this._cl_bindings.length; i<l; i++){
+				var b = this._cl_bindings[i];
+				if(b.source === source && b.receiver === receiver && b.params === params)
+					return true;
+			}
+			return false;
+		}
+});
 
 
 /**
@@ -3059,6 +3152,7 @@ a5.Package('a5.cl')
 a5.Package('a5.cl')
 
 	.Extends('CLService')
+	.Mix('a5.cl.mixins.BindableSource')
 	.Prototype('CLAjax', 'abstract', function(proto, im){
 		
 		/**#@+
@@ -3330,6 +3424,7 @@ a5.Package('a5.cl')
 a5.Package("a5.cl")
 
 	.Extends('CLBase')
+	.Mix('a5.cl.mixins.Binder')
 	.Class("CL", 'singleton', function(self, im){
 		/**#@+
 	 	 * @memberOf a5.cl.CL#

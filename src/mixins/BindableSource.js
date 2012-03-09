@@ -4,56 +4,42 @@ a5.Package('a5.cl.mixins')
 		
 		mixin.BindableSource = function(){
 			this._cl_receivers = [];
-			this._cl_paramType = null;
-			this._cl_paramRequired = false;
+			this._cl_bindParamType = null;
+			this._cl_bindParamRequired = false;
+			this._cl_bindParamCallback = null;
 		}
 		
-		mixin.paramType = function(type){
-			if (type) {
-				this._cl_paramType = type;
-				return this;
-			}
-			return this._cl_paramType;
+		mixin.bindParamProps = function(type, required, callback){
+			this._cl_bindParamType = type;
+			if(required !== undefined) this._cl_bindParamRequired = required;
+			if(callback !== undefined) this._cl_bindParamCallback = callback;
+			return this;
 		}
 		
-		mixin.paramRequired = function(value){
-			if (value) {
-				this._cl_paramRequired = value;
-				return this;
-			}
-			return this._cl_paramRequired;
+		mixin.bindParamType = function(){
+			return this._cl_bindParamType;
 		}
 		
-		mixin.updateBinds = function(data){
-			this.notifyReceivers(data);
+		mixin.bindParamRequired = function(){
+			return this._cl_bindParamRequired;
 		}
 		
-		mixin.attachReceiver = function(receiver, params, mapping, scope){
-			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
-			this.updateBinds();
-		}
-		
-		mixin.notifyReceivers = function(data){
-			if (this._cl_paramRequired === true) {
-				this.throwError('cannot call notifyReceivers on mixed class "' + this.namespace() + '", paramRequired bind sources must call notifyFromParams.');
-			} else {
-				for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
-					var r = this._cl_receivers[i];
-					r.receiver.call(r.scope, this._cl_modifyBindData(data, r.mapping))
-				}
-			}
-		}
-		
-		mixin.notifyFromParams = function(callback){
+		mixin.notifyReceivers = function(data){	
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
-				var result = callback(r.params);
-				if(result !== null)
-					r.receiver.call(r.scope, this._cl_modifyBindData(result, r.mapping));
+				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
+					data = this._cl_bindParamCallback.call(this, r.params);
+				if(data !== null)
+					r.receiver.receiveBindData.call(r.scope, this._cl_modifyBindData(data, r.mapping));
 			}
 		}
 		
-		mixin.detachReceiver = function(receiver){
+		mixin._cl_attachReceiver = function(receiver, params, mapping, scope){
+			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
+			this.notifyReceivers();
+		}
+		
+		mixin._cl_detachReceiver = function(receiver){
 			for(var i = 0, l = this._cl_receivers.length; i<l; i++){
 				var r = this._cl_receivers[i];
 				if(r.receiver === receiver){
@@ -62,7 +48,7 @@ a5.Package('a5.cl.mixins')
 				}
 			}
 		}
-		
+
 		mixin._cl_modifyBindData = function(dataSource, mapping){
 			var data,
 				isQuery = false;

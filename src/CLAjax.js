@@ -8,6 +8,7 @@
 a5.Package('a5.cl')
 
 	.Extends('CLService')
+	.Mix('a5.cl.mixins.BindableSource')
 	.Prototype('CLAjax', 'abstract', function(proto, im){
 		
 		/**#@+

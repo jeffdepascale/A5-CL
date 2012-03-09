@@ -105,8 +105,9 @@ a5.Package('a5.cl.core')
 		this.processAddons = function(callback){
 			var count = 0,
 			processAddon = function(){
-				if (count >= addOns.length - 1) {
+				if (count >= addOns.length) {
 					callback();
+					return;
 				} else {
 					var addOn = addOns[count].instance(),
 						isAsync = addOn.initializeAddOn() === true;

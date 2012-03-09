@@ -8,6 +8,7 @@ src/interfaces/IHTMLTemplate.js
 src/interfaces/ILogger.js
 src/interfaces/IServiceURLRewriter.js
 src/interfaces/IDataStorage.js
+src/interfaces/IBindableReceiver.js
 src/core/PluginManager.js
 src/core/EnvManager.js
 src/core/Instantiator.js
@@ -22,6 +23,7 @@ src/core/GlobalUpdateTimer.js
 src/core/Core.js
 src/mixins/DataStore.js
 src/mixins/BindableSource.js
+src/mixins/Binder.js
 src/CLService.js
 src/CLSocket.js
 src/CLAjax.js

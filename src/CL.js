@@ -2,6 +2,7 @@
 a5.Package("a5.cl")
 
 	.Extends('CLBase')
+	.Mix('a5.cl.mixins.Binder')
 	.Class("CL", 'singleton', function(self, im){
 		/**#@+
 	 	 * @memberOf a5.cl.CL#

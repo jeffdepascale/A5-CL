@@ -15,7 +15,7 @@ a5.Package('com.testpilot111')
 		}
 		
 		cls.Override.applicationLaunched = function(e){
-			cls.render();
+			//cls.render();
 		}
 })
 
