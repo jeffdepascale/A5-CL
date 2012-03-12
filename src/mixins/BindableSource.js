@@ -30,7 +30,7 @@ a5.Package('a5.cl.mixins')
 				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
 					data = this._cl_bindParamCallback.call(this, r.params);
 				if(data !== null)
-					r.receiver.receiveBindData.call(r.scope, this._cl_modifyBindData(data, r.mapping));
+					r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
 			}
 		}
 		
@@ -52,6 +52,7 @@ a5.Package('a5.cl.mixins')
 		mixin._cl_modifyBindData = function(dataSource, mapping){
 			var data,
 				isQuery = false;
+			//TODO - needs to move to ORM implementation
 			if(dataSource instanceof a5.cl.CLQueryResult)
 				isQuery = true;
 			if(isQuery)
