@@ -64,6 +64,8 @@ a5.Package('a5.cl')
 		 */
 		CLEvent.PLUGINS_LOADED = 'pluginsLoaded';
 		
+		CLEvent.APPLICATION_PREPARED = 'applicationPrepared';
+		
 		/**
 		 * @event
 		 * @param {a5.cl.interfaces.ILaunchInterceptor} e.interceptor The plugin that has intercepted the launch.

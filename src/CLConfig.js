@@ -220,6 +220,7 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 */
 	silentIncludes:false,
 	
+	staggerDependencies:true,
 	/**
 	 * Specifies the character delimiter to use when setting the address bar with an append value.
 	 * @field

@@ -63,7 +63,7 @@ a5.Package('a5.cl.core')
 			a5._a5_delayProtoCreation(true);
 			totalItems = urlArray.length;
 			percentPer = 100 / totalItems;
-			if (self.config().xhrDependencies || asXHR) {	
+			if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {	
 				fetchURL(urlArray[loadCount]);
 			} else {
 				for(var i = 0, l = urlArray.length; i<l; i++)
@@ -105,7 +105,7 @@ a5.Package('a5.cl.core')
 					});
 					if(totalItems == 1) retValue = data;
 					else retValue.push(data);
-					if (self.config().xhrDependencies || asXHR) {
+					if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {
 						if (loadCount == totalItems) {
 							completeLoad(retValue);
 						} else {
@@ -123,7 +123,7 @@ a5.Package('a5.cl.core')
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
-								else self.redirect(500, 'Error loading css resource at url ' + url);
+								else self.throwError('Error loading css resource at url ' + url);
 							},
 							headID = document.getElementsByTagName("head")[0],
 							elem = document.createElement('link');
@@ -133,7 +133,7 @@ a5.Package('a5.cl.core')
 							elem.media = 'screen';
 							headID.appendChild(elem);
 							updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
-							callback();
+							continueLoad();
 							elem = headID = null;
 						} else if (type === 'image'){
 							var imgObj = new Image(),
@@ -329,7 +329,7 @@ a5.Package('a5.cl.core')
 							callback();
 						}
 					} catch (e) {
-						self.redirect(500, e)
+						self.throwError(e);
 					} finally {
 						include = head = null;
 					}

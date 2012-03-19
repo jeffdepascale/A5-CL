@@ -413,6 +413,8 @@ a5.Package('a5.cl')
 		 */
 		CLEvent.PLUGINS_LOADED = 'pluginsLoaded';
 		
+		CLEvent.APPLICATION_PREPARED = 'applicationPrepared';
+		
 		/**
 		 * @event
 		 * @param {a5.cl.interfaces.ILaunchInterceptor} e.interceptor The plugin that has intercepted the launch.
@@ -1253,6 +1255,7 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 */
 	silentIncludes:false,
 	
+	staggerDependencies:true,
 	/**
 	 * Specifies the character delimiter to use when setting the address bar with an append value.
 	 * @field
@@ -1738,7 +1741,7 @@ a5.Package('a5.cl.core')
 			if (status != 200 && status != 0) {
 				var props = getPropsForID(id);
 				if (props && props.error) props.error.call(self, status, errorObj);
-				else self.redirect(status, errorObj);
+				else this.throwError(errorObj);
 			}
 		}
 		
@@ -2272,7 +2275,7 @@ a5.Package('a5.cl.core')
 			a5._a5_delayProtoCreation(true);
 			totalItems = urlArray.length;
 			percentPer = 100 / totalItems;
-			if (self.config().xhrDependencies || asXHR) {	
+			if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {	
 				fetchURL(urlArray[loadCount]);
 			} else {
 				for(var i = 0, l = urlArray.length; i<l; i++)
@@ -2314,7 +2317,7 @@ a5.Package('a5.cl.core')
 					});
 					if(totalItems == 1) retValue = data;
 					else retValue.push(data);
-					if (self.config().xhrDependencies || asXHR) {
+					if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {
 						if (loadCount == totalItems) {
 							completeLoad(retValue);
 						} else {
@@ -2332,7 +2335,7 @@ a5.Package('a5.cl.core')
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
-								else self.redirect(500, 'Error loading css resource at url ' + url);
+								else self.throwError('Error loading css resource at url ' + url);
 							},
 							headID = document.getElementsByTagName("head")[0],
 							elem = document.createElement('link');
@@ -2342,7 +2345,7 @@ a5.Package('a5.cl.core')
 							elem.media = 'screen';
 							headID.appendChild(elem);
 							updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
-							callback();
+							continueLoad();
 							elem = headID = null;
 						} else if (type === 'image'){
 							var imgObj = new Image(),
@@ -2538,7 +2541,7 @@ a5.Package('a5.cl.core')
 							callback();
 						}
 					} catch (e) {
-						self.redirect(500, e)
+						self.throwError(e);
 					} finally {
 						include = head = null;
 					}
@@ -2654,6 +2657,7 @@ a5.Package('a5.cl.core')
 			updateLaunchStatus('DEPENDENCIES_LOADED');
 			_pluginManager.instantiatePlugins();
 			updateLaunchStatus('PLUGINS_LOADED');
+			updateLaunchStatus('APPLICATION_PREPARED')
 			_envManager.initialize();
 			_instantiator.beginInstantiation();
 			var plgn = _pluginManager.getRegisteredProcess('launchInterceptor');
@@ -2815,7 +2819,7 @@ a5.Package('a5.cl.mixins')
 				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
 					data = this._cl_bindParamCallback.call(this, r.params);
 				if(data !== null)
-					r.receiver.receiveBindData.call(r.scope, this._cl_modifyBindData(data, r.mapping));
+					r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
 			}
 		}
 		
@@ -2837,6 +2841,7 @@ a5.Package('a5.cl.mixins')
 		mixin._cl_modifyBindData = function(dataSource, mapping){
 			var data,
 				isQuery = false;
+			//TODO - needs to move to ORM implementation
 			if(dataSource instanceof a5.cl.CLQueryResult)
 				isQuery = true;
 			if(isQuery)
@@ -3297,7 +3302,12 @@ a5.Package('a5.cl')
 		}
 		
 		cls.Override.methodPost = function(rules, args, scope, method, callback){
-			scope.notifyReceivers(args[0]);
+			if (rules.length && rules[0].receiverMethod !== undefined) {
+				var method = rules[0].receiverMethod;
+				method.call(null, args[0]);
+			} else {
+				scope.notifyReceivers(args[0]);
+			}
 			return a5.Attribute.SUCCESS;
 		}
 	})
@@ -3635,6 +3645,7 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
+			proto.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, this.dependenciesLoaded);
 			proto.cl().addOneTimeEventListener(im.CLEvent.PLUGINS_LOADED, this.pluginsLoaded);
 			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
@@ -3659,6 +3670,9 @@ a5.Package('a5.cl')
 		 * @param {Object} obj
 		 */
 		proto.setPluginConfig = function(namespace, obj){ CLMain._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
+		
+		
+		proto.dependenciesLoaded = function(){}
 		
 		/**
 		 * 

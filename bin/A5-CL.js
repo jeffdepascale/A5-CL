@@ -196,9 +196,12 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 	
 	createAttribute = function(scope, args){
 		var attributes = Array.prototype.slice.call(args),
-			method = attributes.pop(), i, j, k, l, t,
+			method, i, j, k, l, t,
 			attrObj = {};
-		if(typeof method !== 'function')
+		if(!attributes.length)
+			return a5.ThrowError(305);
+		method = typeof attributes[attributes.length-1] === 'function' ? attributes.pop() : null;
+		if(method !== null && typeof method !== 'function')
 			return a5.ThrowError(300);
 		if (!attributes.length)
 			return a5.ThrowError(301);
@@ -250,10 +253,11 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 				prop,
 				attrClasses = [], 
 				executionScope = this,
-				callOriginator
+				callOriginator,
 				count = 0;
-			for(var prop in proxyFunc)
-				method[prop] = proxyFunc[prop];
+			if(method)
+				for(var prop in proxyFunc)
+					method[prop] = proxyFunc[prop];
 			if (proxyFunc.caller.getClassInstance !== undefined)
 				callOriginator = proxyFunc.caller;
 			for(var i = 0, l = attributes.length; i<l; i++){
@@ -263,26 +267,32 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 				attrClasses.push({cls:clsInst, props:props});
 			}
 			
-			var processCB = function(args, isPost){
-				processAttribute(count, args, isPost);
+			var processCB = function(args, isPost, preArgs){
+				processAttribute(count, args, isPost, preArgs);
 			},
 			
-			processAttribute = function(id, args, isPost){
-				if (Object.prototype.toString.call(args) !== '[object Array]')
-					args = [args];
+			processAttribute = function(id, args, isPost, preArgs){
+				if (args) {
+					if (Object.prototype.toString.call(args) !== '[object Array]') 
+						args = [args];
+				} else {
+					args = [];
+				}
+				if(!preArgs)
+					preArgs = args;
 				if (id >= attrClasses.length) {
 					if (isPost) {
-							return args[0];
+						return args[0];
 					} else 						
-						return processPost(args);
+						return processPost(args, preArgs);
 				}
 				var ret, 
 					isPost = isPost || false,
 					isAsync = false,
 					callback = function(_args){
-						processCB.call(this, _args || args, isPost);	
+						processCB.call(this, _args || args, isPost, preArgs);	
 					}	
-					ret = attrClasses[id].cls["method" + (isPost ? "Post" : "Pre")](attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator);
+					ret = attrClasses[id].cls["method" + (isPost ? "Post" : "Pre")](attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator, preArgs);
 				if (ret !== null && ret !== undefined) {
 					switch(ret){
 						case a5.Attribute.SUCCESS:
@@ -299,15 +309,15 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 					}
 				} else
 					return a5.ThrowError(308, null, {prop:prop, method:isPost ? 'methodPost' : 'methodPre'});
-				count++;
+				count = id+1;
 				if(!isAsync)
-					return processAttribute(count, ret, isPost);
+					return processAttribute(count, ret, isPost, args, preArgs);
 			},
 			
-			processPost = function(args){
+			processPost = function(args, preArgs){
 				count = 0;
-				var postRet = method.apply(executionScope, args);
-				return processAttribute(count, postRet, true);
+				var postRet = method ? method.apply(executionScope, args) : args.length ? args[0] : undefined;
+				return processAttribute(0, postRet, true, preArgs);
 			},		
 			
 			preRet = processAttribute(count, Array.prototype.slice.call(arguments));
@@ -386,7 +396,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		obj.Override = {};
 		obj.Final = {};
 		owner.call(scope, obj, imports, stRef);
-		a5.core.mixins.initializeMixins(obj);
+		a5.core.mixins.prepareMixins(obj);
 		processMethodChangers(obj);
 		for (prop in obj) {
 			if (({}).hasOwnProperty.call(obj, prop) && typeof obj[prop] === 'function' && a5.core.classProxyObj[prop] === undefined) {
@@ -913,7 +923,6 @@ a5.SetNamespace('a5.core.classProxyObj',{
  		 * @memberOf TopLevel#
  		 * @function
 	 	 */
-		_a5_ar:{},
 		isA5:true,
 		isA5ClassDef:function(){ return false },
 		
@@ -1134,7 +1143,8 @@ a5.SetNamespace('a5.core.classProxyObj',{
 				this._a5_instanceUID = this.namespace().replace(/\./g, '_') + '__' + this.constructor.instanceCount();
 				if(this.instanceCount() === 0)
 					this.constructor._a5_instance = this;
-				this.constructor._instanceCount++;					
+				this.constructor._instanceCount++;	
+				this._a5_ar = {};				
 				var self = this,
 					descenderRef = this,
 					_args = args || [],
@@ -1156,7 +1166,7 @@ a5.SetNamespace('a5.core.classProxyObj',{
 									descenderRef.constructor.superclass().constructor.namespace ? 
 									descenderRef.constructor.superclass() : null;
 				}
-				//a5.core.mixins.initializeMixins(this);
+				a5.core.mixins.initializeMixins(this);
 				for(i = 0, l = protoPropRef.length; i<l; i++)
 					protoPropRef[i].call(this);
 				this.constructor._a5_instanceConst.apply(this, _args);
@@ -1263,10 +1273,13 @@ a5.SetNamespace('a5.core.verifiers', {
 	checkImplements:function(cls, implement){
 		if(typeof implement === 'string')
 			implement = a5.GetNamespace(implement);
-		var imRef = cls._implementsRef, i, l;
-		for(i = 0, l=imRef.length; i<l; i++)
-			if(imRef[i] === implement)
-				return true;
+		var imRef = cls._implementsRef, i, j, k, l;
+		while (imRef) {
+			for (i = 0, l = imRef.length; i < l; i++) 
+				if (imRef[i] === implement) 
+					return true;
+			imRef = cls.superclass() ? cls.superclass().getStatic()._implementsRef : null;
+		}
 		return false;
 	},
 	
@@ -1340,7 +1353,7 @@ a5.SetNamespace('a5.core.verifiers', {
 
 a5.SetNamespace('a5.core.mixins', {
 	
-	initializeMixins:function(inst){
+	prepareMixins:function(inst){
 		var scope = inst,
 			mixinRef = inst.constructor._mixinRef,
 			i, l, prop, cls;
@@ -1352,13 +1365,22 @@ a5.SetNamespace('a5.core.mixins', {
 						if (!inst.doesExtend(a5.GetNamespace(cls, inst.imports())))
 							return a5.ThrowError(400, null, {nm:mixinRef[i].namespace()});
 					}
-				}
+				}			
+			}						
+		}	
+	},
+	
+	initializeMixins:function(inst){
+		var scope = inst,
+			mixinRef = inst.constructor._mixinRef,
+			i, l, prop, cls;
+		if (mixinRef.length) {
+			for (i = mixinRef.length - 1, l = -1; i > l; i--)
 				if (mixinRef[i]._a5_mixinProps !== undefined) 
 					mixinRef[i]._a5_mixinProps.call(scope);
-			}						
 			for(i = 0, l = mixinRef.length; i<l; i++)
 				mixinRef[i]._a5_instanceConst.call(scope);
-		}	
+		}
 	},
 	
 	mixinsReady:function(scope){
@@ -1685,6 +1707,45 @@ a5.Package('a5')
 			 	return retVal;
 		}
 
+})
+
+a5.Package('a5')
+
+	.Extends('Attribute')
+	.Class('PropertyMutatorAttribute', function(cls){
+		
+		cls.PropertyMutatorAttribute = function(){
+			cls.superclass(this);
+		}
+		
+		cls.Override.methodPre = function(typeRules, args, scope, method, callback, callOriginator){
+			if(args.length){
+				var typeVal = typeRules[0].validate,
+					isCls = false;
+				if(typeVal){
+					if (typeVal.indexOf('.') !== -1) {
+						isCls = true;
+						var typeVal = a5.GetNamespace(typeVal);
+						if(!typeVal)
+							return a5.Attribute.FAILURE;
+					}
+					var isValid = isCls ? (args[0] instanceof typeVal) : (typeof args[0] === typeVal);
+					if(!isValid)
+						return a5.Attribute.FAILURE;
+				}
+				scope[typeRules[0].property] = args[0];
+				return a5.Attribute.SUCCESS;
+			}
+			var retVal = scope[typeRules[0].property];
+			return retVal === null ? a5.Attribute.RETURN_NULL : retVal;
+		}	
+		
+		cls.Override.methodPost = function(typeRules, args, scope, method, callback, callOriginator, preArgs){
+			if (preArgs.length) 
+				return scope;
+			else 				
+				return a5.Attribute.SUCCESS;
+		}
 })
 
 
@@ -2228,6 +2289,7 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	302:'Attribute error: Attributes call accepts only arrays as attribute annotations.',
 	303:'Attribute error: First parameter must be a reference to a class that extends a5.Attribute.',
 	304:'Attribute error: invalid parameter specified for Attribute, params must be key/value pair objects.',
+	305:'Attribute error: no parameters passed to Attribute call.',
 	308:'Error processing attribute "{prop}", "{method}" must return a value.',
 	
 	//400: mixins
@@ -2658,6 +2720,8 @@ a5.Package('a5.cl')
 		 * @description Dispatched when all plugins have successfully loaded, if any.
 		 */
 		CLEvent.PLUGINS_LOADED = 'pluginsLoaded';
+		
+		CLEvent.APPLICATION_PREPARED = 'applicationPrepared';
 		
 		/**
 		 * @event
@@ -3499,6 +3563,7 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 */
 	silentIncludes:false,
 	
+	staggerDependencies:true,
 	/**
 	 * Specifies the character delimiter to use when setting the address bar with an append value.
 	 * @field
@@ -3984,7 +4049,7 @@ a5.Package('a5.cl.core')
 			if (status != 200 && status != 0) {
 				var props = getPropsForID(id);
 				if (props && props.error) props.error.call(self, status, errorObj);
-				else self.redirect(status, errorObj);
+				else this.throwError(errorObj);
 			}
 		}
 		
@@ -4518,7 +4583,7 @@ a5.Package('a5.cl.core')
 			a5._a5_delayProtoCreation(true);
 			totalItems = urlArray.length;
 			percentPer = 100 / totalItems;
-			if (self.config().xhrDependencies || asXHR) {	
+			if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {	
 				fetchURL(urlArray[loadCount]);
 			} else {
 				for(var i = 0, l = urlArray.length; i<l; i++)
@@ -4560,7 +4625,7 @@ a5.Package('a5.cl.core')
 					});
 					if(totalItems == 1) retValue = data;
 					else retValue.push(data);
-					if (self.config().xhrDependencies || asXHR) {
+					if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {
 						if (loadCount == totalItems) {
 							completeLoad(retValue);
 						} else {
@@ -4578,7 +4643,7 @@ a5.Package('a5.cl.core')
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
-								else self.redirect(500, 'Error loading css resource at url ' + url);
+								else self.throwError('Error loading css resource at url ' + url);
 							},
 							headID = document.getElementsByTagName("head")[0],
 							elem = document.createElement('link');
@@ -4588,7 +4653,7 @@ a5.Package('a5.cl.core')
 							elem.media = 'screen';
 							headID.appendChild(elem);
 							updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
-							callback();
+							continueLoad();
 							elem = headID = null;
 						} else if (type === 'image'){
 							var imgObj = new Image(),
@@ -4784,7 +4849,7 @@ a5.Package('a5.cl.core')
 							callback();
 						}
 					} catch (e) {
-						self.redirect(500, e)
+						self.throwError(e);
 					} finally {
 						include = head = null;
 					}
@@ -4900,6 +4965,7 @@ a5.Package('a5.cl.core')
 			updateLaunchStatus('DEPENDENCIES_LOADED');
 			_pluginManager.instantiatePlugins();
 			updateLaunchStatus('PLUGINS_LOADED');
+			updateLaunchStatus('APPLICATION_PREPARED')
 			_envManager.initialize();
 			_instantiator.beginInstantiation();
 			var plgn = _pluginManager.getRegisteredProcess('launchInterceptor');
@@ -5061,7 +5127,7 @@ a5.Package('a5.cl.mixins')
 				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
 					data = this._cl_bindParamCallback.call(this, r.params);
 				if(data !== null)
-					r.receiver.receiveBindData.call(r.scope, this._cl_modifyBindData(data, r.mapping));
+					r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
 			}
 		}
 		
@@ -5083,6 +5149,7 @@ a5.Package('a5.cl.mixins')
 		mixin._cl_modifyBindData = function(dataSource, mapping){
 			var data,
 				isQuery = false;
+			//TODO - needs to move to ORM implementation
 			if(dataSource instanceof a5.cl.CLQueryResult)
 				isQuery = true;
 			if(isQuery)
@@ -5543,7 +5610,12 @@ a5.Package('a5.cl')
 		}
 		
 		cls.Override.methodPost = function(rules, args, scope, method, callback){
-			scope.notifyReceivers(args[0]);
+			if (rules.length && rules[0].receiverMethod !== undefined) {
+				var method = rules[0].receiverMethod;
+				method.call(null, args[0]);
+			} else {
+				scope.notifyReceivers(args[0]);
+			}
 			return a5.Attribute.SUCCESS;
 		}
 	})
@@ -5881,6 +5953,7 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
+			proto.cl().addOneTimeEventListener(im.CLEvent.DEPENDENCIES_LOADED, this.dependenciesLoaded);
 			proto.cl().addOneTimeEventListener(im.CLEvent.PLUGINS_LOADED, this.pluginsLoaded);
 			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
@@ -5905,6 +5978,9 @@ a5.Package('a5.cl')
 		 * @param {Object} obj
 		 */
 		proto.setPluginConfig = function(namespace, obj){ CLMain._cl_storedCfgs.pluginConfigs.push({nm:namespace, obj:obj}); }
+		
+		
+		proto.dependenciesLoaded = function(){}
 		
 		/**
 		 * 

@@ -56,6 +56,7 @@ a5.Package('a5.cl.core')
 			updateLaunchStatus('DEPENDENCIES_LOADED');
 			_pluginManager.instantiatePlugins();
 			updateLaunchStatus('PLUGINS_LOADED');
+			updateLaunchStatus('APPLICATION_PREPARED')
 			_envManager.initialize();
 			_instantiator.beginInstantiation();
 			var plgn = _pluginManager.getRegisteredProcess('launchInterceptor');

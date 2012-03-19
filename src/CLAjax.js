@@ -153,7 +153,12 @@ a5.Package('a5.cl')
 		}
 		
 		cls.Override.methodPost = function(rules, args, scope, method, callback){
-			scope.notifyReceivers(args[0]);
+			if (rules.length && rules[0].receiverMethod !== undefined) {
+				var method = rules[0].receiverMethod;
+				method.call(null, args[0]);
+			} else {
+				scope.notifyReceivers(args[0]);
+			}
 			return a5.Attribute.SUCCESS;
 		}
 	})
