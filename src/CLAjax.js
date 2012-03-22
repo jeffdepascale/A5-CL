@@ -110,15 +110,22 @@ a5.Package('a5.cl')
 		cls.Override.methodPre = function(rules, args, scope, method, callback){
 			args = Array.prototype.slice.call(args);
 			var data = null,
+				argsCallback = null,
 				rules = rules.length ? rules[0] : {},
 				propObj = null;
 			if (rules.takesData === true && args.length)
 				data = args.shift();
+			if(rules.props)
+				propObj = rules.props;
+			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
+				argsCallback = args.shift();
 			var executeCall = function(){
 				scope.call(method.getName(), data, function(response){
 					args.unshift(response);
+					if(argsCallback)
+						argsCallback(args);
 					callback(args);
-				}, (rules && rules.length ? rules[0] : null));
+				}, propObj);
 			}
 			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
 				if (method._cl_cycleID) {

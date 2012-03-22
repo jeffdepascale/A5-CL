@@ -32,7 +32,8 @@ a5.cl.CreateApplication = function(props, callback){
 			callback = props;
 			props = undefined;
 		}
-		props = (props === undefined ? {}:((typeof props === 'object') ? props : {applicationPackage:props}));
+		if(props === undefined)
+			props = {};
 		if(callback && typeof callback === 'function')
 			a5.CreateCallback(callback);
 		

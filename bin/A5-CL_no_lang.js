@@ -33,7 +33,8 @@ a5.cl.CreateApplication = function(props, callback){
 			callback = props;
 			props = undefined;
 		}
-		props = (props === undefined ? {}:((typeof props === 'object') ? props : {applicationPackage:props}));
+		if(props === undefined)
+			props = {};
 		if(callback && typeof callback === 'function')
 			a5.CreateCallback(callback);
 		
@@ -1653,13 +1654,14 @@ a5.Package('a5.cl.core')
 						data = props.data || null,
 						urlAppend = method == "GET" ? createAppend(props.data, true) : '';
 					if (data) {
-						if (props.isJson) {
-							data = a5.cl.core.JSON.stringify(data);
-						} else if (props.formData === true) {
+						if (props.formData === true) {
+							contentType = "multipart/form-data";
 							var fd = new FormData();
 							for (var prop in data) 
 								fd.append(prop, data[prop])
 							data = fd;
+						} else if (props.isJson) {
+							data = a5.cl.core.JSON.stringify(data);
 						} else {
 							contentType = 'application/x-www-form-urlencoded';
 							data = createAppend(data, false);
@@ -3259,15 +3261,22 @@ a5.Package('a5.cl')
 		cls.Override.methodPre = function(rules, args, scope, method, callback){
 			args = Array.prototype.slice.call(args);
 			var data = null,
+				argsCallback = null,
 				rules = rules.length ? rules[0] : {},
 				propObj = null;
 			if (rules.takesData === true && args.length)
 				data = args.shift();
+			if(rules.props)
+				propObj = rules.props;
+			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
+				argsCallback = args.shift();
 			var executeCall = function(){
 				scope.call(method.getName(), data, function(response){
 					args.unshift(response);
+					if(argsCallback)
+						argsCallback(args);
 					callback(args);
-				}, (rules && rules.length ? rules[0] : null));
+				}, propObj);
 			}
 			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
 				if (method._cl_cycleID) {
@@ -3479,15 +3488,14 @@ a5.Package("a5.cl")
 
 		this.CL = function(params){
 			self.superclass(this);
-			_params = params;
+			_params = {};
 			if(a5.cl.CLMain._extenderRef.length)
-				_main = self.create(a5.cl.CLMain._extenderRef[0], [self]);
-			if(!params.applicationPackage)
-				params.applicationPackage = _main.classPackage();
-			core = self.create(a5.cl.core.Core, [params.applicationPackage]);
-			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
+				_main = self.create(a5.cl.CLMain._extenderRef[0], [params]);
+			_params.applicationPackage = _main.classPackage();
+			core = self.create(a5.cl.core.Core, [_params.applicationPackage]);
+			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), _params);
 			_config = core.instantiator().createConfig(_config);
-			core.initializeCore((params.environment || null), (params.clientEnvironment || null));
+			core.initializeCore((params.environment || null), (_params.clientEnvironment || null));
 		}
 		
 		this.launchState = function(){ return core.launchState(); }

@@ -18,15 +18,14 @@ a5.Package("a5.cl")
 
 		this.CL = function(params){
 			self.superclass(this);
-			_params = params;
+			_params = {};
 			if(a5.cl.CLMain._extenderRef.length)
-				_main = self.create(a5.cl.CLMain._extenderRef[0], [self]);
-			if(!params.applicationPackage)
-				params.applicationPackage = _main.classPackage();
-			core = self.create(a5.cl.core.Core, [params.applicationPackage]);
-			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
+				_main = self.create(a5.cl.CLMain._extenderRef[0], [params]);
+			_params.applicationPackage = _main.classPackage();
+			core = self.create(a5.cl.core.Core, [_params.applicationPackage]);
+			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), _params);
 			_config = core.instantiator().createConfig(_config);
-			core.initializeCore((params.environment || null), (params.clientEnvironment || null));
+			core.initializeCore((params.environment || null), (_params.clientEnvironment || null));
 		}
 		
 		this.launchState = function(){ return core.launchState(); }

@@ -83,13 +83,14 @@ a5.Package('a5.cl.core')
 						data = props.data || null,
 						urlAppend = method == "GET" ? createAppend(props.data, true) : '';
 					if (data) {
-						if (props.isJson) {
-							data = a5.cl.core.JSON.stringify(data);
-						} else if (props.formData === true) {
+						if (props.formData === true) {
+							contentType = "multipart/form-data";
 							var fd = new FormData();
 							for (var prop in data) 
 								fd.append(prop, data[prop])
 							data = fd;
+						} else if (props.isJson) {
+							data = a5.cl.core.JSON.stringify(data);
 						} else {
 							contentType = 'application/x-www-form-urlencoded';
 							data = createAppend(data, false);
