@@ -24,13 +24,15 @@ a5.Package('a5.cl.mixins')
 			return this._cl_bindParamRequired;
 		}
 		
-		mixin.notifyReceivers = function(data){	
+		mixin.notifyReceivers = function(data, params){	
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
-				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
-					data = this._cl_bindParamCallback.call(this, r.params);
-				if(data !== null)
-					r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
+				if (params === undefined || params === r.params) {
+					if (this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null)) 
+						data = this._cl_bindParamCallback.call(this, r.params);
+					if (data !== null && data !== undefined) 
+						r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
+				}
 			}
 		}
 		

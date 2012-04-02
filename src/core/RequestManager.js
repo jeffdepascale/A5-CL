@@ -12,6 +12,7 @@ a5.Package('a5.cl.core')
 		var defaultContentType,
 			defaultMethod,
 			reqArray,
+			asyncRunning = false,
 			reqCount;
 	
 		this.RequestManager = function(){
@@ -20,6 +21,10 @@ a5.Package('a5.cl.core')
 			reqCount = 0;
 			defaultContentType = self.config().requestDefaultContentType;
 			defaultMethod = self.config().requestDefaultMethod;
+		}
+		
+		this.asyncRunning = function(){
+			return asyncRunning;
 		}
 
 		this.processItem = function(props, reqID){
@@ -136,8 +141,10 @@ a5.Package('a5.cl.core')
 		 * @name a5.cl.core.RequestManager#makeRequest
 		 */
 		this.makeRequest = function(props){
-			if((reqArray.length === 0 || isSilent()) && props.silent !== true)
+			if ((reqArray.length === 0 || isSilent()) && props.silent !== true) {
+				asyncRunning = true;
 				self.cl().dispatchEvent(im.CLEvent.ASYNC_START);
+			}
 			var reqID = reqCount++;
 			props.url = a5.cl.core.Utils.makeAbsolutePath(props.url);
 			var obj = {props:props,
@@ -159,8 +166,10 @@ a5.Package('a5.cl.core')
 		this.reqComplete = function(id){
 			var wasSilent = isSilent();
 			unqueueItem(id);
-			if((reqArray.length === 0 || isSilent()) && !wasSilent)
+			if ((reqArray.length === 0 || isSilent()) && !wasSilent) {
+				asyncRunning = false;
 				self.cl().dispatchEvent(im.CLEvent.ASYNC_COMPLETE);
+			}
 		}
 		
 		this.updateProgress = function(id, e){

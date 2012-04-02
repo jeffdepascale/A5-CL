@@ -151,6 +151,8 @@ a5.Package("a5.cl")
 		
 		this._core = function(){		return core; }
 		
+		this.asyncRunning = function(){ return core.requestManager().asyncRunning(); }
+		
 		this._cl_createParams = function(){ return _params; }
 		
 		this.Override.eListenersChange = function(e){

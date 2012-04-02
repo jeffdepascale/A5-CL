@@ -164,7 +164,7 @@ a5.Package('a5.cl')
 				var method = rules[0].receiverMethod;
 				method.call(null, args[0]);
 			} else {
-				scope.notifyReceivers(args[0]);
+				scope.notifyReceivers(args[0], method.getName());
 			}
 			return a5.Attribute.SUCCESS;
 		}
