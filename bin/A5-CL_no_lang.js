@@ -1583,6 +1583,7 @@ a5.Package('a5.cl.core')
 		var defaultContentType,
 			defaultMethod,
 			reqArray,
+			asyncRunning = false,
 			reqCount;
 	
 		this.RequestManager = function(){
@@ -1591,6 +1592,10 @@ a5.Package('a5.cl.core')
 			reqCount = 0;
 			defaultContentType = self.config().requestDefaultContentType;
 			defaultMethod = self.config().requestDefaultMethod;
+		}
+		
+		this.asyncRunning = function(){
+			return asyncRunning;
 		}
 
 		this.processItem = function(props, reqID){
@@ -1707,8 +1712,10 @@ a5.Package('a5.cl.core')
 		 * @name a5.cl.core.RequestManager#makeRequest
 		 */
 		this.makeRequest = function(props){
-			if((reqArray.length === 0 || isSilent()) && props.silent !== true)
+			if ((reqArray.length === 0 || isSilent()) && props.silent !== true) {
+				asyncRunning = true;
 				self.cl().dispatchEvent(im.CLEvent.ASYNC_START);
+			}
 			var reqID = reqCount++;
 			props.url = a5.cl.core.Utils.makeAbsolutePath(props.url);
 			var obj = {props:props,
@@ -1730,8 +1737,10 @@ a5.Package('a5.cl.core')
 		this.reqComplete = function(id){
 			var wasSilent = isSilent();
 			unqueueItem(id);
-			if((reqArray.length === 0 || isSilent()) && !wasSilent)
+			if ((reqArray.length === 0 || isSilent()) && !wasSilent) {
+				asyncRunning = false;
 				self.cl().dispatchEvent(im.CLEvent.ASYNC_COMPLETE);
+			}
 		}
 		
 		this.updateProgress = function(id, e){
@@ -2815,13 +2824,15 @@ a5.Package('a5.cl.mixins')
 			return this._cl_bindParamRequired;
 		}
 		
-		mixin.notifyReceivers = function(data){	
+		mixin.notifyReceivers = function(data, params){	
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
-				if(this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null))
-					data = this._cl_bindParamCallback.call(this, r.params);
-				if(data !== null)
-					r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
+				if (params === undefined || params === r.params) {
+					if (this._cl_bindParamRequired || (!data && this._cl_bindParamCallback !== null)) 
+						data = this._cl_bindParamCallback.call(this, r.params);
+					if (data !== null && data !== undefined) 
+						r.receiver.receiveBindData.call(r.scope || r.receiver, this._cl_modifyBindData(data, r.mapping));
+				}
 			}
 		}
 		
@@ -3303,21 +3314,21 @@ a5.Package('a5.cl')
 
 a5.Package('a5.cl')
 
-	.Extends('a5.Attribute')
+	.Extends('a5.AspectAttribute')
 	.Class('BoundAjaxReturnAttribute', function(cls){
 		
 		cls.BoundAjaxReturnAttribute = function(){
 			cls.superclass(this);
 		}
 		
-		cls.Override.methodPost = function(rules, args, scope, method, callback){
+		cls.Override.before = function(rules, args, scope, method, callback){
 			if (rules.length && rules[0].receiverMethod !== undefined) {
 				var method = rules[0].receiverMethod;
 				method.call(null, args[0]);
 			} else {
-				scope.notifyReceivers(args[0]);
+				scope.notifyReceivers(args[0], method.getName());
 			}
-			return a5.Attribute.SUCCESS;
+			return a5.AspectAttribute.SUCCESS;
 		}
 	})
 
@@ -3620,6 +3631,8 @@ a5.Package("a5.cl")
 		this.relaunch = function(){ core.relaunch(); }
 		
 		this._core = function(){		return core; }
+		
+		this.asyncRunning = function(){ return core.requestManager().asyncRunning(); }
 		
 		this._cl_createParams = function(){ return _params; }
 		
