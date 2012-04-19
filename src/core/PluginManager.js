@@ -122,7 +122,7 @@ a5.Package('a5.cl.core')
 		var checkRequires = function(plugin){
 			var r = plugin._cl_requires;
 			for(var i = 0, l = r.length; i<l; i++){
-				if(!a5.GetNamespace(r[i]))
+				if(!a5.GetNamespace(r[i], null, true))
 					return r[i];	
 			}
 			return false;

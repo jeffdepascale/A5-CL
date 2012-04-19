@@ -132,7 +132,7 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 * @field
 	 * @type Number
 	 * @name a5.cl.CLConfig#globalUpdateTimerInterval
-	 * @default 100
+	 * @default 10
 	 */
 	globalUpdateTimerInterval:10,
 	
