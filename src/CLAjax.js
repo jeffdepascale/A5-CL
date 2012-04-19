@@ -152,20 +152,20 @@ a5.Package('a5.cl')
 
 a5.Package('a5.cl')
 
-	.Extends('a5.Attribute')
+	.Extends('a5.AspectAttribute')
 	.Class('BoundAjaxReturnAttribute', function(cls){
 		
 		cls.BoundAjaxReturnAttribute = function(){
 			cls.superclass(this);
 		}
 		
-		cls.Override.methodPost = function(rules, args, scope, method, callback){
+		cls.Override.before = function(rules, args, scope, method, callback){
 			if (rules.length && rules[0].receiverMethod !== undefined) {
 				var method = rules[0].receiverMethod;
 				method.call(null, args[0]);
 			} else {
 				scope.notifyReceivers(args[0], method.getName());
 			}
-			return a5.Attribute.SUCCESS;
+			return a5.AspectAttribute.SUCCESS;
 		}
 	})
