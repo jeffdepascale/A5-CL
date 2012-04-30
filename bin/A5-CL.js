@@ -2186,17 +2186,24 @@ a5.Package("a5")
 		 * @param {Object} method The associated listener method to be removed.
 		 * @param {Boolean} [useCapture=false] Whether the listener to remove is bound to the capture phase or the bubbling phase.
 		 */
-		proto.removeEventListener = function(type, method, useCapture){
-			var types = type.split('|'),
+		proto.removeEventListener = function(type, method,  $useCapture, $scope, $isOneTime){
+			var scope = $scope || null,
+				types = type.split('|'),
+				isOneTime = $isOneTime || false,
+				useCapture = $useCapture === true,
+				shouldPush = true,
 				i, l, listArray, j, m;
-			useCapture = useCapture === true;
 			for (i = 0, l = types.length; i < l; i++) {
 				listArray = this._a5_getListenerArray(types[i]);
 				if (listArray) {
-					for (j = 0, m = listArray.length; j < m; j++) {
-						if (listArray[j].method == method && listArray[j].type == types[i] && listArray[j].useCapture === useCapture) {
-							listArray.splice(j, 1);
-							m = listArray.length;
+					for (j = 0, m = listArray.length; j < m; j++) {					
+						if (listArray[j].method === method && 
+							listArray[j].type === types[i] && 
+							listArray[j].useCapture === useCapture && 
+							listArray[j].scope === scope && 
+							listArray[j].isOneTime === isOneTime) {
+								listArray.splice(j, 1);
+								m = listArray.length;
 						}
 					}
 					this.eListenersChange({
@@ -2262,19 +2269,24 @@ a5.Package("a5")
 		
 		//private methods
 		
-		proto._a5_addEventListener = function(type, method, useCapture, $scope, $isOneTime){
+		proto._a5_addEventListener = function(type, method, $useCapture, $scope, $isOneTime){
 			var scope = $scope || null,
 				types = type.split('|'),
 				isOneTime = $isOneTime || false,
+				useCapture = $useCapture === true,
 				shouldPush = true,
 				i, l, listArray, j, m;
 			if (types.length != 0 && method != undefined) {
 				for (i = 0, l = types.length; i < l; i++) {
 					listArray = this._a5_getListenerArray(types[i], true);
 					for (j = 0, m = listArray.length; j < m; j++) {
-						if (listArray[j].method === method && listArray[j].type === types[i] && listArray[j].useCapture === useCapture) {
-							shouldPush = false;
-							break;
+						if (listArray[j].method === method && 
+							listArray[j].type === types[i] && 
+							listArray[j].useCapture === useCapture && 
+							listArray[j].scope === scope && 
+							listArray[j].isOneTime === isOneTime) {
+								shouldPush = false;
+								break;
 						}
 					}
 					if (shouldPush) {
@@ -3106,7 +3118,7 @@ a5.Package('a5.cl.core')
 		var checkRequires = function(plugin){
 			var r = plugin._cl_requires;
 			for(var i = 0, l = r.length; i<l; i++){
-				if(!a5.GetNamespace(r[i]))
+				if(!a5.GetNamespace(r[i], null, true))
 					return r[i];	
 			}
 			return false;
@@ -3568,7 +3580,7 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 * @field
 	 * @type Number
 	 * @name a5.cl.CLConfig#globalUpdateTimerInterval
-	 * @default 100
+	 * @default 10
 	 */
 	globalUpdateTimerInterval:10,
 	
