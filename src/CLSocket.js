@@ -86,7 +86,7 @@ a5.Package('a5.cl')
 		
 		/**
 		 * @name dataReceived
-		 * @param {String}Object} message
+		 * @param {String|Object} message
 		 */
 		proto.dataReceived = function(data){
 			
