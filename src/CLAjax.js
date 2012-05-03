@@ -117,6 +117,11 @@ a5.Package('a5.cl')
 				data = args.shift();
 			if(rules.props)
 				propObj = rules.props;
+			if(rules.hasErrorCallback){
+				if(!propObj)
+					propObj= {};
+				propObj.error = args.pop();	
+			}
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
 			var executeCall = function(){
