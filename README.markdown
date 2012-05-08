@@ -6,7 +6,7 @@ Detailed release notes coming soon, along with wiki implementation guides.
 
 A5 CL includes A5 directly, no separate script is required to run.
 
-Quick Tutorial: Hello World
+Quick Tutorial: Hello World 
 
 a5.Package('testApp')
 
