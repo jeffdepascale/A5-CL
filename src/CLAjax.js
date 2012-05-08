@@ -1,9 +1,6 @@
 
 /**
- * @class Base class for Ajax handlers.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLAjax
- * @extends a5.cl.CLService
+ * Base class for Ajax endpoint consumers.
  */
 a5.Package('a5.cl')
 
@@ -11,37 +8,28 @@ a5.Package('a5.cl')
 	.Mix('a5.cl.mixins.BindableSource')
 	.Prototype('CLAjax', 'abstract', function(proto, im){
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLAjax#
-	 	 * @function
-		 */	
-		
-		proto.CLAjax = function(){
-			proto.superclass(this);
+		this.Properties(function(){
 			this._cl_ajaxStruct = null;
 			this._cl_silent = false;
-		}
+		})
 		
 		/**
 		 * Defines the default properties for the service endpoint.
-		 * @name initialize
 		 * @param {String} url The service endpoint without a method specified, used as a prefix to all method values passed in call method.
 		 * @param {Object} props Properties object, see {@link a5.cl.CLAjax#call} for more info.
 		 */
-		proto.Override.initialize = function(url, props){
-			proto.superclass().initialize.call(this, url);
+		proto.CLAjax = function(url, props){
+			proto.superclass(this, [url]);
 			this._cl_ajaxStruct = props;
 		}
 				
 		/**
 		 * Performs a call on the service. initialize must be called first.
-		 * @name call
-		 * @type Number
-		 * @returns The request ID.
 		 * @param {String} method The method to call on the endpoint. An empty string or null may be passed to call services that do not define methods.
 		 * @param {Object} [data] A data object to pass as JSON. 
 		 * @param {Function} [callback] A function to pass returned results to.
 		 * @param {Object} [props] Call props object.
+		 * @returns {Number} The request ID.
 		 */
 		proto.call = function(m, data, callback, props){
 			//TODO: enforceContract to allow overload with no method, or no data
@@ -73,7 +61,6 @@ a5.Package('a5.cl')
 		
 		/**
 		 * Aborts all calls associated with the service.
-		 * @name abort
 		 * @param {Number} [id] A specific request ID to abort instead of aborting all pending requests.
 		 */
 		proto.abort = function(id){
@@ -82,7 +69,7 @@ a5.Package('a5.cl')
 		
 		/**
 		 * Gets or sets the silent property.  When set to true, requests will not trigger ASYNC_START and ASYNC_COMPLETE events.
-		 * @param {Object} value
+		 * @param {Boolean} value
 		 */
 		proto.silent = function(value){
 			if(typeof value === 'boolean'){
@@ -93,12 +80,20 @@ a5.Package('a5.cl')
 		}
 });
 
+
+/**
+ * Adds ajax call wrapping logic to a method. Calls to methods with this attribute are assumed to execute a call
+ * to a method on the endpoint of the same name.
+ */
 a5.Package('a5.cl')
 
 	.Extends('a5.Attribute')
-	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
+	.Static(function(AjaxCallAttribute){
 		
 		AjaxCallAttribute.CANCEL_CYCLE	= 'ajaxCallAttributeCancelCycle';
+		
+	})
+	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
 		
 		var cycledCalls = {};
 		
@@ -107,7 +102,7 @@ a5.Package('a5.cl')
 			
 		}
 		
-		cls.Override.methodPre = function(rules, args, scope, method, callback){
+		cls.Override.before = function(rules, args, scope, method, callback){
 			args = Array.prototype.slice.call(args);
 			var data = null,
 				argsCallback = null,
@@ -155,6 +150,9 @@ a5.Package('a5.cl')
 		}	
 })
 
+/**
+ * Associates a method on a CLAjax instance as associated with a bind configuration from {@link a5.cl.mixins.Binder}
+ */
 a5.Package('a5.cl')
 
 	.Extends('a5.AspectAttribute')

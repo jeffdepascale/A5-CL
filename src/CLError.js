@@ -1,4 +1,7 @@
 
+/**
+ * Defines an error in A5 CL.
+ */
 a5.Package('a5.cl')
 
 	.Extends('a5.Error')

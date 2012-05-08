@@ -1,33 +1,29 @@
 
 /**
- * @class Base class for service handlers in the AirFrame CL framework.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLService
- * @extends a5.cl.CLBase
+ * Base class for service consumers in A5 CL.
  */
 a5.Package('a5.cl')
 
 	.Extends('CLBase')
-	.Prototype('CLService', 'abstract', function(proto, im){
+	.Prototype('CLService', 'abstract', function(proto, im){	
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLService#
-	 	 * @function
-		 */		
-		
-		proto.CLService = function(){
-			proto.superclass(this);
+		this.Properties(function(){
 			this._cl_url = null;
 			this._cl_isJson = true;
-		}
+		})
 		
-
-		proto.initialize = function(url){
+		/**
+		 * Constructor for CLService
+		 * @param {String} url The url of the service endpoint.
+		 */
+		proto.CLService = function(url){
+			proto.superclass(this);
 			this._cl_url = url;
 		}
 		
 		/**
-		 * @name url
+		 * Returns the url of the service endpoint, respecting the serviceURLRewriter plugin process if associated.
+		 * @return {String}
 		 */
 		proto.url = function(){
 			var plgn = this.plugins().getRegisteredProcess('serviceURLRewriter');
@@ -37,8 +33,9 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * @name isJson
-		 * @param {Boolean} [value]
+		 * Getter/Setter method for the default setting for the consumer endpoint for JSON parsing.
+		 * @param {Boolean} [value] If passed, sets the value.
+		 * @return {Boolean|a5.cl.CLService} if a value is passed, returns a reference to the object instance for chaining, otherwise returns the value.
 		 */
 		proto.isJson = function(value){
 			if(value !== undefined) this._cl_isJson = value;
@@ -54,9 +51,5 @@ a5.Package('a5.cl')
 		
 		cls.SerializableAttribute = function(){
 			
-		}
-		
-		cls.Override.instanceProcess = function(rules, instance){
-		
 		}
 })

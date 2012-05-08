@@ -1,14 +1,27 @@
 
+/**
+ * Adds capabilities to a class to be a data source for a binding.
+ */
 a5.Package('a5.cl.mixins')
 	.Mixin('BindableSource', function(mixin, im){
 		
-		mixin.BindableSource = function(){
-			this._cl_receivers = [];
+		this.Properties(function(){
+			this._cl_receivers = null;
 			this._cl_bindParamType = null;
 			this._cl_bindParamRequired = false;
 			this._cl_bindParamCallback = null;
+		})
+		
+		mixin.BindableSource = function(){
+			this._cl_receivers = [];
 		}
 		
+		/**
+		 * 
+		 * @param {String} type
+		 * @param {Boolean} required
+		 * @param {Function} callback
+		 */
 		mixin.bindParamProps = function(type, required, callback){
 			this._cl_bindParamType = type;
 			if(required !== undefined) this._cl_bindParamRequired = required;
@@ -16,14 +29,27 @@ a5.Package('a5.cl.mixins')
 			return this;
 		}
 		
+		/**
+		 * Returns the data type of the param binding, specified in bindParamProps.
+		 * @return {String}
+		 */
 		mixin.bindParamType = function(){
 			return this._cl_bindParamType;
 		}
 		
+		/**
+		 * Returns whether a param is required for a binding, specified in bindParamProps.
+		 * @return {String}
+		 */
 		mixin.bindParamRequired = function(){
 			return this._cl_bindParamRequired;
 		}
 		
+		/**
+		 * Sends data to registered binding receivers.
+		 * @param {Object} data The data to send.
+		 * @param {Object} params Parameter data, based on values set in bindParamProps.
+		 */
 		mixin.notifyReceivers = function(data, params){	
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];

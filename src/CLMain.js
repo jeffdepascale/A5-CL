@@ -7,6 +7,9 @@ a5.Package('a5.cl')
 	})
 	.Prototype('CLMain', 'abstract', function(proto, im, CLMain){
 		
+		/**
+		 * @param {Object} [params=null] An optional object of parameters to pass into the application instance. Must be passed as a parameter to a5.cl.CreateApplication.
+		 */
 		proto.CLMain = function(){
 			proto.superclass(this);
 			if(CLMain._extenderRef.length > 1)

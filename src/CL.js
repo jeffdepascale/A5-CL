@@ -1,13 +1,11 @@
-
+/**
+ * The instance of an A5 CL application, acting as both a reference instance for core components via its methods and as a global binder object.
+ */
 a5.Package("a5.cl")
 
 	.Extends('CLBase')
 	.Mix('a5.cl.mixins.Binder')
 	.Class("CL", 'singleton', function(self, im){
-		/**#@+
-	 	 * @memberOf a5.cl.CL#
-	 	 * @function
-		 */
 	
 		var _params,
 			_config,
@@ -15,7 +13,11 @@ a5.Package("a5.cl")
 			core;
 		
 		this._cl_plugins = {};
-
+		
+		/**
+		 * 
+		 * @param {Object} params
+		 */
 		this.CL = function(params){
 			self.superclass(this);
 			_params = {};
@@ -28,11 +30,14 @@ a5.Package("a5.cl")
 			core.initializeCore((params.environment || null), (_params.clientEnvironment || null));
 		}
 		
+		/**
+		 * Returns the current launch state of the application, a value from TODO
+		 */
 		this.launchState = function(){ return core.launchState(); }
 		
 		/**
-		 *
-		 * @param {Boolean} [returnString]
+		 * Returns a reference to the application package.
+		 * @param {Boolean} [returnString=false] If true is passed, returns the string value of the namespace of the application package.
 		 */
 		this.applicationPackage = function(){ return core.instantiator().applicationPackage.apply(this, arguments); };
 		

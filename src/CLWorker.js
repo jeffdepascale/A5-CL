@@ -1,25 +1,22 @@
 
 /**
- * @class Worker class instance, performs a task on a worker thread when available or in the browser thread when not.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLWorker
- * @extends a5.CLEventDispatcher
+ * Worker class instance, performs a task on a worker thread when available or in the browser thread when not.
  */
 a5.Package('a5.cl')
 	
 	.Extends('CLBase')
 	.Prototype('CLWorker', 'abstract', function(proto, im){
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLWorker#
-	 	 * @function
-		 */
+		this.Properties(function(){
+			this._cl_communicator = null;
+			this._cl_JSON = null;
+			this._cl_isWorker = false;
+		})
 		
 		proto.CLWorker = function(isWorker){
 			proto.superclass(this);
 			if(this.isSingleton())
 				this.throwError("Workers cannot be singletons.");
-			this._cl_communicator = null;
 			this._cl_JSON = a5.cl.core.JSON || JSON;
 			this._cl_isWorker = (isWorker === '_cl_isWorkerInitializer');
 			if (!this._cl_isWorker) 
@@ -147,3 +144,17 @@ a5.Package('a5.cl')
 				this.callMethod('destroy');
 		}			
 });
+
+a5.Package('a5.cl')
+
+	.Extends('a5.Attribute')
+	.Class('WorkerMethod', function(cls, im, WorkerMethod){
+		
+		cls.WorkerMethod = function(){
+			cls.superclass(this);
+		}		
+		
+		cls.Override.before = function(){
+			
+		}
+})

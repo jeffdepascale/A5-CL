@@ -1,57 +1,51 @@
 
 /**
- * @class Base class for web sockets in the AirFrame CL framework.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLSocket
- * @extends a5.cl.CLService
+ * Base class for web socket consumers in the A5 CL framework.
  */
 a5.Package('a5.cl')
-
+	
+	.Import('a5.cl.core.JSON')
 	.Extends('CLService')
-	.Prototype('CLSocket', 'abstract', function(proto, im, CLSocket){
+	.Static(function(CLSocket){
 		
+		/**
+		 * Returns whether the application context has support for the HTML5 WebSocket API, required for CLSocket usage.
+		 */
 		CLSocket.supportsSockets = function(){
 			return 'WebSocket' in window ? true : false;
-		}
+		}	
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLSocket#
-	 	 * @function
-		 */		
+	})
+	.Prototype('CLSocket', 'abstract', function(proto, im, CLSocket){
 		
-		proto.CLSocket = function(){
-			proto.superclass(this);
+		this.Properties(function(){
 			this._cl_socket = null;
-			var self = this;
-			this._cl_socketOnMessage = function(e){
-				var data = self.isJson() ? a5.cl.core.JSON.parse(e.data):e.data;
-				self.dataReceived(data);
-			}
-		}
+			this._cl_socketOnMessage = null;
+		})
 		
 		/**
-		 * 
-		 * @name initialize
-		 * @param {String} url
-		 * @return {Boolean} success
+		 * Constructor for a CLSocket instance.
+		 * @param {String} url The location of the socket endpoint.
 		 */
-		proto.Override.initialize = function(url){
-			if (this.supportsSockets()){
+		proto.CLSocket = function(url){
+			proto.superclass(this, [url]);
+			if (CLSocket.supportsSockets()) {
 				this._cl_socket = new WebSocket(url);
-				return true;
-			} else {
-				return false;
+				var self = this;
+				this._cl_socketOnMessage = function(e){
+					var data = self.isJson() ? im.JSON.parse(e.data) : e.data;
+					self.dataReceived(data);
+				}
 			}
 		}
 		
 		/**
-		 * Performs a call on the socket. createSocket must be called first.
-		 * @name send
+		 * Performs a call on the socket endpoint.
 		 * @param {String} message The message to send to the socket.
 		 * @param {Function} [callback] A function to pass returned results to.
 		 */
 		proto.send = function(m, callback){
-			if (this.supportsSockets()) {
+			if (CLSocket.supportsSockets()) {
 				var self = this;
 				self._cl_socket.onmessage = self._cl_socketOnMessage;
 				var sendMsg = function(){
@@ -85,28 +79,21 @@ a5.Package('a5.cl')
 		
 		
 		/**
-		 * @name dataReceived
-		 * @param {String|Object} message
+		 * Override to receive data from the socket connection.
+		 * @param {String|Object} message The returned data, either an object or a string depending on the value of the isJson setting.
 		 */
 		proto.dataReceived = function(data){
 			
 		}
 		
 		/**
-		 * @name supportsSockets
-		 */
-		proto.supportsSockets = function(){
-			return CLSocket.supportsSockets;
-		}
-		
-		/**
-		 * @name close
+		 * Closes the socket connection.
 		 */
 		proto.close = function(){
 			if(this._cl_socket) this._cl_socket.close();
 		}	
 		
 		proto.dealloc = function(){
-			if(this._cl_socket && this._cl_socket.readyState === 2) this.closeSocket();
+			if(this._cl_socket && this._cl_socket.readyState === 2) this.close();
 		}
 });

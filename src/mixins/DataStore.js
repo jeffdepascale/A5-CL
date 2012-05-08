@@ -1,29 +1,24 @@
 
 
 /**
- * @class Mixin class for providing data storage hooks. DataStore applies a uniqe ID prefix on key values, removing the need to assure uniqueness of keys in your application. Key prefixes are unique to the class in which they are referenced.
- * <br/><b>Abstract</b>
- * @name a5.cl.mixins.DataStore
- * @extends a5.cl.CLBase
+ * Mixin class for providing data storage hooks. DataStore applies a uniqe ID prefix on key values, removing the need to 
+ * assure uniqueness of keys in your application. Key prefixes are unique to the class in which they are referenced.
  */
 a5.Package('a5.cl.mixins')
 	.Import('a5.cl.core.DataCache')
 	.Mixin('DataStore', function(proto, im, DataStore){
-
-		/**#@+
-	 	 * @memberOf a5.cl.mixins.DataStore#
-	 	 * @function
-		 */	
 		
-		proto.DataStore = function(){
+		this.Properties(function(){
 			this._cl_cacheKeyValidated = false;
 			this._cl_prefix = null;
 			this._cl_validatedPrefix = null;
+		})
+		
+		proto.DataStore = function(){
 		}
 		
 		/**
 		 * Returns whether caching has previously been set by the application on the client and values are available for retrieval.
-		 * @name cacheExists
 		 * @returns {Boolean}
 		 */
 		proto.cacheExists = function(){
@@ -31,8 +26,9 @@ a5.Package('a5.cl.mixins')
 		}
 		
 		/**
-		 * Stores a value uniquely keyed in the localStorage cache. 
-		 * @name storeValue
+		 * Stores a value uniquely keyed in the localStorage cache.
+		 * @param {String} key
+		 * @param {String} value
 		 * @returns {Boolean} success
 		 */
 		proto.storeValue = function(key, value){
@@ -41,6 +37,10 @@ a5.Package('a5.cl.mixins')
 			else return false;
 		}
 		
+		/**
+		 * Specifies a predefined prefix name for values when stored in localStorage.
+		 * @param {Object} value
+		 */
 		proto.keyPrefix = function(value){
 			if(typeof value === 'string'){
 				this._cl_prefix = value;
@@ -51,8 +51,8 @@ a5.Package('a5.cl.mixins')
 		
 		/**
 		 * Retrieves a value for the specified key from the client data store.
-		 * @name getValue
-		 * @returns {*} False if failure
+		 * @param key {String}
+		 * @returns {Object} False if failure
 		 */
 		proto.getValue = function(key){
 			if(im.DataCache.isAvailable()) 
@@ -62,7 +62,7 @@ a5.Package('a5.cl.mixins')
 		
 		/**
 		 * Removes the value for the specified key from the client data store.
-		 * @name clearValue
+		 * @param key {String}
 		 */
 		proto.clearValue = function(key){
 			if(im.DataCache.isAvailable()) 
@@ -72,7 +72,6 @@ a5.Package('a5.cl.mixins')
 		
 		/**
 		 * Clears all key/value pairs associated with the class in which the method is called.
-		 * @name clearScopeValues
 		 * @param {Array} [exceptions] An array of keys to leave untouched when clearing.
 		 */
 		proto.clearScopeValues = function(exceptions){

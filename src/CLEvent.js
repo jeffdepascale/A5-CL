@@ -14,10 +14,6 @@ a5.Package('a5.cl')
 })
 
 
-/**
- * @class 
- * @name a5.cl.CLEvent
- */
 a5.Package('a5.cl')
 	
 	.Extends('a5.Event')
@@ -64,6 +60,9 @@ a5.Package('a5.cl')
 		 */
 		CLEvent.PLUGINS_LOADED = 'pluginsLoaded';
 		
+		/**
+		 * 
+		 */
 		CLEvent.APPLICATION_PREPARED = 'applicationPrepared';
 		
 		/**
@@ -104,13 +103,6 @@ a5.Package('a5.cl')
 		 * @description Dispatched when the window is resized.
 		 */
 		CLEvent.WINDOW_RESIZED = 'windowResized';
-		
-		/**
-		 * @event
-		 * @param {Array} parsedLinks
-		 * @description Dispatched when the address bar hash changes
-		 */
-		CLEvent.HASH_CHANGE = 'hashChange';
 		
 		/**
 		 * @event
@@ -156,24 +148,6 @@ a5.Package('a5.cl')
 		 */
 		CLEvent.APPLICATION_ERROR = 'applicationError';
 		
-		/**
-		 * @event
-		 * @description Dispatched when the render() method is called on a mappable controller.
-		 * @param {a5.cl.CLController} controller
-		 */
-		CLEvent.RENDER_CONTROLLER = 'renderController';
-		
-		/**
-		 * @event
-		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
-		 */
-		CLEvent.ADDED_TO_PARENT = 'addedToParent';
-		
-		/**
-		 * @event
-		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
-		 */
-		CLEvent.REMOVED_FROM_PARENT = 'removedFromParent';
 	})
 	.Prototype('CLEvent', function(proto, im){
 		

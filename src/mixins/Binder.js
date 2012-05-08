@@ -1,12 +1,23 @@
 
+/**
+ * Adds capabilities to a class to manage bindings.
+ */
 a5.Package('a5.cl.mixins')
 	.Mixin('Binder', function(mixin, im){
 		
-		mixin.Binder = function(){
+		this.Properties(function(){
 			this._cl_bindingsConnected = true;
+			this._cl_bindings = [];
+		});
+		
+		mixin.Binder = function(){
 			this._cl_bindings = [];
 		}
 		
+		/**
+		 * Sets whether bindings are currently enabled. If set to false, all bindings are suspended, unless a binding has its persist value set to true.
+		 * @param {Boolean} value
+		 */
 		mixin.setBindingEnabled = function(value){
 			if (value !== this._cl_bindingsConnected) {
 				for (var i = 0, l = this._cl_bindings.length; i < l; i++) {
@@ -21,10 +32,23 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
+		/**
+		 * Returns whether bindings are active.
+		 * @return {Boolean}
+		 */
 		mixin.bindingsConnected = function(){
 			return this._cl_bindingsConnected;
 		}
 		
+		/**
+		 * Creates a bind between a data source and a receiver.
+		 * @param {a5.cl.mixins.BindableSource} source
+		 * @param {a5.cl.interfaces.IBindableReceiver} receiver
+		 * @param {Object} params Parameters for the binding source, as specified by the receiver.
+		 * @param {Object} [mapping] If specified, remaps properties by name to new values. 
+		 * @param {Object} [scope] Defines a scope to call the bind receiver in.
+		 * @param {Object} [persist=false] If set to true, the binding will remain active if bindings are set to disabled.
+		 */
 		mixin.bind = function(source, receiver, params, mapping, scope, persist){
 			if(!this._cl_checkBindExists(source, receiver, params)){
 				if(source.isA5ClassDef())
@@ -67,6 +91,12 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
+		/**
+		 * Removes a given binding, if it exists.
+		 * @param {a5.cl.mixins.BindableSource} source
+		 * @param {a5.cl.interfaces.IBindableReceiver} receiver
+		 * @throws 
+		 */
 		mixin.unbind = function(source, receiver){
 			var found = false;
 			for(var i = 0, l = this._cl_bindings.length; i<l; i++){

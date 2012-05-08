@@ -1,19 +1,12 @@
 
 /**
- * @class Base class for all classes in the AirFrame CL MVC framework. 
- * <br/><b>Abstract</b>
- * @name a5.cl.CLBase
- * @extends a5.CLEventDispatcher
+ * Base class for all classes in an A5 CL application. 
  */
 a5.Package('a5.cl')
 
 	.Extends('a5.EventDispatcher')
 	.Prototype('CLBase', function(proto){
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLBase#
-	 	 * @function
-		 */	
 		this.Properties(function(){
 			this._cl_mvcName = null;
 		})
@@ -23,26 +16,25 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * @name cl
-		 * @return
-		 * @type a5.cl.MVC#
+		 * Returns a reference to the CL application instance.
+		 * @return {a5.cl.CL}
 		 */
 		proto.cl = function(){
 			return a5.cl.instance();
 		}
 		
 		/**
-		 * Returns an instance of the class defined by the following parameters:
-		 * @name getClassInstance
-		 * @param {String} type One of 'Domain', 'Service', or 'Controller'
-		 * @param {String} className The functional name of the class. For example, if you class is called 'FooController', the className value would be 'Foo'. 
+		 * Returns an instance of the class defined by the specified parameters
+		 * @param {String} type A string value representing the type of class to instantiate. 'Service' is available by default, add-ons may register additional type names for instantiation. 
+		 * @param {String} className The functional name of the class. For example, if you class is called 'FooService', the className value would be 'Foo'. 
 		 */
 		proto.getClassInstance = function(type, className){
 			return this.cl()._core().instantiator().getClassInstance(type, className);
 		}
 		
 		/**
-		 * @name log
+		 * Sends a log value to any registered logging plugins, or the console if available.
+		 * @param {Object} value
 		 */
 		proto.log = function(value){
 			var plgn = this.plugins().getRegisteredProcess('logger');
@@ -53,6 +45,10 @@ a5.Package('a5.cl')
 					console.log.apply(console, arguments);
 		}
 		
+		/**
+		 * Sends a warn value to any registered logging plugins, or the console if available.
+		 * @param {Object} value
+		 */
 		proto.warn = function(value){
 			var plgn = this.plugins().getRegisteredProcess('logger');
 			if (plgn) 
@@ -67,23 +63,24 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * Returns the configuration object.
-		 * @name config
+		 * Returns a reference to the configuration object for the A5 CL application instance.
+		 * @return {a5.cl.CLConfig}
 		 */
 		proto.config = function(){
 			return this.cl().config();
 		}
 		
 		/**
-		 * @name plugins
+		 * Returns a reference to the plugins object for the A5 CL application instance.
+		 * @return {Object}
 		 */
 		proto.plugins = function(){
 			return this.cl().plugins();
 		}
 		
 		/**
-		 * Returns the appParams object as specified in the config object
-		 * @name appParams
+		 * Returns a reference to the appParams object for the A5 CL application instance.
+		 * @return {Object}
 		 */
 		proto.appParams = function(){
 			return this.cl().appParams();
