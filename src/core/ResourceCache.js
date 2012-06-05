@@ -17,6 +17,7 @@ a5.Package('a5.cl.core')
 			dataCache,
 			shouldUseCache,
 			requestManager,
+			cacheBreakValue,
 			cacheTypes = [
 				{type:'html', extension:'html'},
 				{type:'html', extension:'htm'},
@@ -34,6 +35,11 @@ a5.Package('a5.cl.core')
 			this.superclass(this);
 			requestManager = a5.cl.core.RequestManager.instance();
 			cacheTypes = cacheTypes.concat(this.config().cacheTypes);
+			if(self.config().cacheBreak && typeof self.config().applicationBuild === 'string'){
+				var trimVal = im.Utils.trim(self.config().applicationBuild);
+				if(trimVal !== "")
+					cacheBreakValue = trimVal;
+			}
 			resources = {};
 		}
 		
@@ -121,6 +127,8 @@ a5.Package('a5.cl.core')
 				if (!cacheValue) {
 					if (type) {
 						url = a5.cl.core.Utils.makeAbsolutePath(checkReplacements(url));
+						if(cacheBreakValue)
+							url = url + '?a5=' + cacheBreakValue;
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);

@@ -53,28 +53,29 @@ a5.Package('a5.cl.core')
 		}
 		
 		Utils.deepClone = function(obj){
-		    if (typeof obj !== 'object' || obj == null) {
-		        return obj;
-		    }
-		    var c = obj instanceof Array ? [] : {};
-		    for (var i in obj) {
-		        var prop = obj[i];
-		        if (typeof prop == 'object') {
-		           if (prop instanceof Array) {
-		               c[i] = [];
-		               for (var j = 0, l=prop.length; j < l; j++) {
-		                   if (typeof prop[j] != 'object') c[i].push(prop[j]);
-		                   else c[i].push(obj[prop[j]]);
-		               }
-		           } else {
-		               c[i] = obj[prop];
-		           }
-		        } else {
-		           c[i] = prop;
-		        }
-		    }
-		    return c;
-		}
+              if (typeof obj !== 'object' || obj == null) {
+                  return obj;
+              }
+              var c = Utils.isArray(obj) ? [] : {};
+              for (var i in obj) {
+                  var value = obj[i];
+                  if (typeof value == 'object') {
+                     if (Utils.isArray(value)) {
+                         c[i] = [];
+                         for (var j = 0, l=value.length; j < l; j++) {
+                             if (typeof value[j] != 'object') c[i].push(value[j]);
+                             else c[i].push(Utils.deepClone(value[j]));
+                         }
+                     } else {
+                         c[i] = Utils.deepClone(value);
+                     }
+                  } else {
+                     c[i] = value;
+                  }
+              }
+              return c;
+          }
+
 		
 		Utils.initialCap = function(str){
 			return str.substr(0, 1).toUpperCase() + str.substr(1);

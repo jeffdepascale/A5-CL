@@ -14,6 +14,12 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	allowUntestedPlugins:false,
 	
 	/**
+	 * @type String
+	 * @default null
+	 */
+	applicationBuild:null,
+	
+	/**
 	 * @field
 	 * @type  String 
 	 * @name a5.cl.CLConfig#appName
@@ -36,6 +42,12 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 * @default 'views/'
 	 */
 	applicationViewPath:'views/',
+	
+	/**
+	 * @type Boolean
+	 * @default false
+	 */
+	cacheBreak:false,
 	
 	/**
 	 * @field
