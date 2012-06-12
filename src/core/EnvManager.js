@@ -195,8 +195,8 @@ a5.Package('a5.cl.core')
 						e = a5.Create(a5.Error, [e, false]);
 					if(url) e.url = url;
 					if(line) e.line = line;
-					self.dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
-					return true;
+					self.cl().dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
+					return false;
 				};
 			}
 			var orientationEvent = ("onorientationchange" in window) ? "onorientationchange" : "onresize";
