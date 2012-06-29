@@ -95,7 +95,8 @@ a5.Package('a5.cl')
 	})
 	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
 		
-		var cycledCalls = {};
+		var cycledCalls = {},
+			data = {};
 		
 		cls.AjaxCallAttribute = function(){
 			cls.superclass(this);
@@ -120,12 +121,23 @@ a5.Package('a5.cl')
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
 			var executeCall = function(){
-				scope.call(method.getName(), data, function(response){
-					args.unshift(response);
-					if(argsCallback)
-						argsCallback(args);
-					callback(args);
-				}, propObj);
+				if (rules.cacheResponse && getData(method)) {
+					setTimeout(function(){
+						args.unshift(getData(method));
+						if (argsCallback) 
+							argsCallback(args);
+						callback(args);
+					}, 0);
+				} else {	
+					scope.call(method.getName(), data, function(response){
+						if (rules.cacheResponse)
+							storeData(method, response);
+						args.unshift(response);
+						if (argsCallback) 
+							argsCallback(args);
+						callback(args);
+					}, propObj);
+				}
 			}
 			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
 				if (method._cl_cycleID) {
@@ -148,6 +160,14 @@ a5.Package('a5.cl')
 			}
 			return a5.Attribute.ASYNC;
 		}	
+		
+		var getData = function(method){
+			return data[method.getClassInstance().instanceUID() + "_" + method.getName()];
+		}	
+		
+		var storeData = function(method, value){
+			data[method.getClassInstance().instanceUID() + "_" + method.getName()] = value;
+		}
 })
 
 /**
