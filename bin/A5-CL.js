@@ -49,6 +49,8 @@
 		return context;
 	},
 	
+	_a5_destroyedObj = {},
+	
 	TrackWindowStrays = function(){
 		windowItemList = {};
 		for(var prop in window)
@@ -215,6 +217,13 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 			attrObj[arr[0].className()] = vals;
 		}
 		
+		if (!isAspect) {
+			if(!method)
+				method = function(){};
+			method._a5_attributes = attrObj;
+			return method;
+		}
+
 		attrObj.wrappedMethod = method;
 			
 		var proxyFunc = function(){
@@ -268,9 +277,10 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 					callback = function(_args){
 						processCB.call(this, _args || args, isAfter, beforeArgs);	
 					}	
-					ret = attrClasses[id].cls.around(attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator, beforeArgs);
+					var argsObj = a5.Create(a5.AspectCallArguments, [attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator, beforeArgs]);
+					ret = attrClasses[id].cls.around(argsObj);
 					if(ret === a5.AspectAttribute.NOT_IMPLEMENTED)
-						ret = attrClasses[id].cls[(isAfter ? "after" : "before")](attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator, beforeArgs);
+						ret = attrClasses[id].cls[(isAfter ? "after" : "before")](argsObj);
 					else
 						isAround = true;
 				if (ret !== null && ret !== undefined) {
@@ -440,14 +450,17 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		a5.core.mixins.prepareMixins(obj);
 		processMethodChangers(obj);
 		for (prop in obj) {
-			if (({}).hasOwnProperty.call(obj, prop) && typeof obj[prop] === 'function' && a5.core.classProxyObj[prop] === undefined) {
-				if (prop === obj.className()) {
-					obj.constructor._a5_instanceConst = obj[prop];
-					a5.core.reflection.setReflection(stRef, obj, prop, obj.constructor._a5_instanceConst);
-					delete obj[prop];
-				} else {
-					a5.core.reflection.setReflection(stRef, obj, prop);
-				}
+			if (prop !== "Attributes" &&
+				({}).hasOwnProperty.call(obj, prop) && 
+				typeof obj[prop] === 'function' && 
+				(stRef._a5_namespace === 'a5.Object' || a5.core.classProxyObj.instance[prop] === undefined)) {
+					if (prop === obj.className()) {
+						obj.constructor._a5_instanceConst = obj[prop];
+						a5.core.reflection.setReflection(stRef, obj, prop, obj.constructor._a5_instanceConst);
+						delete obj[prop];
+					} else {
+						a5.core.reflection.setReflection(stRef, obj, prop);
+					}
 			}
 		}
 		delete obj.Final;
@@ -822,9 +835,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 				Properties: function(propFunc){
 					obj.prototype.constructor._a5_mixinProps = propFunc;
 				},
-				Contract:function(contract, method){
-					return a5.core.contracts.createContract(contract, method);
-				},
 				MustExtend:function(){
 					obj.prototype.constructor._a5_mixinMustExtend = arguments;
 				},
@@ -1103,7 +1113,7 @@ a5.SetNamespace('a5.core.classProxyObj',{
 		/**
 		 * @name classPackage
 		 */
-		classPackage:function(){ return this.constructor.classPackage(); },
+		classPackage:function(getObj){ return this.constructor.classPackage(getObj); },
 		
 		/**
 		 * @name className
@@ -1222,17 +1232,17 @@ a5.SetNamespace('a5.core.classProxyObj',{
 					} else {
 						descenderRef = null;
 					}
-				}
+				}	
 				if(this.constructor._a5_instance === this)
 					this.constructor._a5_instance = null;
 				for(prop in this._a5_ar)
 					delete this._a5_ar[prop];
-				for (prop in this) 
-					if(({}).hasOwnProperty.call(this, prop) 
-					&& typeof this.constructor.prototype[prop] === 'undefined' 
-					&& prop !== '_a5_initialized'
-					&& prop !== '_a5_instanceUID') 
-						this[prop] = null;
+				for (prop in this) {
+					this[prop] = null;
+					delete this[prop];
+				}
+				if(this.__proto__)
+					this.__proto__ = a5._a5_destroyedObj;
 			}
 		},
 		_a5_initialize: function(args){
@@ -1468,7 +1478,7 @@ a5.SetNamespace('a5.core.mixins', {
 					for (prop in mixinRef[i]._a5_mixinMustExtend) {
 						cls = mixinRef[i]._a5_mixinMustExtend[prop];
 						if (!inst.doesExtend(a5.GetNamespace(cls, inst.imports())))
-							return a5.ThrowError(400, null, {nm:mixinRef[i].namespace()});
+							return a5.ThrowError(400, null, {mixinNM:mixinRef[i].namespace(), instNM:inst.namespace(), clsNM:cls.namespace()});
 					}
 				}			
 			}						
@@ -1585,6 +1595,18 @@ a5._a5_getThrownError = a5.core.errorHandling._a5_getThrownError;
 
 a5.Package('a5')
 
+	.Prototype('Object', function(cls, im){
+		cls.Object = function(){
+			
+		}	
+})
+
+
+/**
+ * Decorates classes and methods with meta information, accessible through reflection.
+ */
+a5.Package('a5')
+
 	.Prototype('Attribute', 'singleton', function(proto, im, Attribute){
 		
 		proto.Attribute = function(){
@@ -1592,30 +1614,122 @@ a5.Package('a5')
 
 })
 
+/**
+ * Decorates methods with cross cutting logic.
+ */
 a5.Package('a5')
 
 	.Extends('Attribute')
 	.Prototype('AspectAttribute', function(cls, im, AspectAttribute){
 		
+		/**
+		 * Returned from aspect methods where an explicit null is the return value.
+		 */
 		AspectAttribute.RETURN_NULL = '_a5_aspectReturnsNull';
+		
+		/**
+		 * Returned from aspect methods when the test passes with no modification to the passed params.
+		 */
 		AspectAttribute.SUCCESS = '_a5_aspectSuccess';
+		
+		/**
+		 * Returned from aspect methods when a test method requires asynchronous processing. The callback param must be called to continue the aspect chain.
+		 */
 		AspectAttribute.ASYNC = '_a5_aspectAsync';
+		
+		/**
+		 * Returned from aspect methods when a test method fails processing.
+		 */
 		AspectAttribute.FAILURE = '_a5_aspectFailure';
+		
+		/**
+		 * Returned from aspect methods by default when a method is not overriden.
+		 */
 		AspectAttribute.NOT_IMPLEMENTED = '_a5_notImplemented';
 		
 		cls.AspectAttribute = function(){
 			cls.superclass(this);
 		}
 		
-		cls.before = function(){ return AspectAttribute.NOT_IMPLEMENTED; }
+		/**
+		 * Override to specify logic that should occur before the attributed method block is executed.
+		 * @param {a5.AspectCallArguments} Arguments for the context of the aspect;
+		 */
+		cls.before = function(rules, args, scope, method, callback, callOriginator){ return AspectAttribute.NOT_IMPLEMENTED; }
 		
-		cls.after = function(){ return AspectAttribute.NOT_IMPLEMENTED; }
+		/**
+		 * Override to specify logic that should occur after the attributed method block is executed.
+		 * @param {a5.AspectCallArguments} Arguments for the context of the aspect;
+		 */
+		cls.after = function(rules, args, scope, method, callback, callOriginator, beforeArgs){ return AspectAttribute.NOT_IMPLEMENTED; }
 		
+		/**
+		 * Override to specify logic that should occur both before and after the attributed method block is executed.
+		 * @param {a5.AspectCallArguments} Arguments for the context of the aspect;
+		 */
 		cls.around = function(){ return AspectAttribute.NOT_IMPLEMENTED; }
 });
 
+a5.Package('a5')
 
+	.Class('AspectCallArguments', function(cls, im, AspectCallArguments){
+		
+		var _rules, _args, _scope, _method, _callback, _callOriginator, _beforeArgs;
+		
+		cls.AspectCallArguments = function(rules, args, scope, method, callback, callOriginator, beforeArgs){
+			_rules = rules;
+			_args = args;
+			_scope = scope;
+			_method = method;
+			_callback = callback;
+			_callOriginator = callOriginator;
+			_beforeArgs = beforeArgs;
+		}
+		
+		/**
+		 * Returns the rule parameters defined when the attribute was applied.
+		 * @returns {Array}
+		 */
+		cls.rules = function(){ return _rules; }
+		
+		/**
+		 * Returns the arguments being passed to the method.
+		 * @returns {Array}
+		 */
+		cls.args = function(){ return _args; }
+		
+		/**
+		 * Returns the scope of the method.
+		 * @returns {a5.Object}
+		 */
+		cls.scope = function(){ return _scope; }
+		
+		/**
+		 * Returns the definition of the wraped method, accessible for reflection purposes.
+		 * @returns {Function}
+		 */
+		cls.method = function(){ return _method; }
+		
+		/**
+		 * Returns a method that must be invoked with a return status when returning {@link AspectAttribute.ASYNC}.
+		 * @return {Function}
+		 */
+		cls.callback = function(){ return _callback; }
+		
+		/**
+		 * When accessible, returns the object that made the call to the method.
+		 */
+		cls.callOriginator = function(){ return _callOriginator; }
+		
+		/**
+		 * On after methods and after phase of around methods, returns the args passed to the before chain of the aspect.
+		 */
+		cls.beforeArgs = function(){ return _beforeArgs; }
+})
 
+/**
+ * Strictly defines parameters for a method, and optionally overloaded parameter options.
+ */
 a5.Package('a5')
 
 	.Extends('AspectAttribute')
@@ -1624,20 +1738,20 @@ a5.Package('a5')
 		cls.ContractAttribute = function(){
 			cls.superclass(this);
 		}
-		
-		cls.Override.before = function(typeRules, args, scope, method, callback){
+
+		cls.Override.before = function(aspectParams){
 			var retObj = null,
 				foundTestRule = false,
 				processError = function(error){
-					error.message = 'Contract type failure on method "' + method.getName() + '" ' + error.message;
+					error.message = 'Contract type failure on method "' + aspectParams.method().getName() + '" ' + error.message;
 					return error;
 				}
 				
 			//TODO: validate structure of passed rules. 
 			//checkIsValid for datatypes, default vals should still fail out via error
-			if(typeRules.length > 1){
-				for (i = 0, l = typeRules.length; i < l; i++) {
-					retObj = runRuleCheck(typeRules[i], args);
+			if(aspectParams.rules().length > 1){
+				for (i = 0, l = aspectParams.rules().length; i < l; i++) {
+					retObj = runRuleCheck(aspectParams.rules()[i], aspectParams.args());
 					if (retObj instanceof a5.ContractException) {
 						cls.throwError(processError(retObj));
 						return a5.AspectAttribute.FAILURE;
@@ -1650,7 +1764,7 @@ a5.Package('a5')
 				}
 			} else {
 				foundTestRule = true;
-				retObj = runRuleCheck(typeRules[0], args, true);
+				retObj = runRuleCheck(aspectParams.rules()[0], aspectParams.args(), true);
 				if (retObj instanceof a5.ContractException) {
 					cls.throwError(processError(retObj));
 					return a5.AspectAttribute.FAILURE;
@@ -1802,6 +1916,10 @@ a5.Package('a5')
 
 })
 
+
+/**
+ * Applies cross cutting logic to a method to wrap getter and setter like functionality to a property in a Prototype class.
+ */
 a5.Package('a5')
 
 	.Extends('AspectAttribute')
@@ -1810,10 +1928,10 @@ a5.Package('a5')
 		cls.PropertyMutatorAttribute = function(){
 			cls.superclass(this);
 		}
-		
-		cls.Override.before = function(typeRules, args, scope, method, callback, callOriginator){
-			if(args.length){
-				var typeVal = typeRules[0].validate,
+
+		cls.Override.before = function(aspectArgs){
+			if(aspectArgs.args().length){
+				var typeVal = aspectArgs.rules()[0].validate,
 					isCls = false;
 				if(typeVal){
 					if (typeVal.indexOf('.') !== -1) {
@@ -1822,20 +1940,20 @@ a5.Package('a5')
 						if(!typeVal)
 							return a5.AspectAttribute.FAILURE;
 					}
-					var isValid = isCls ? (args[0] instanceof typeVal) : (typeof args[0] === typeVal);
+					var isValid = isCls ? (aspectArgs.args()[0] instanceof typeVal) : (typeof aspectArgs.args()[0] === typeVal);
 					if(!isValid)
 						return a5.AspectAttribute.FAILURE;
 				}
-				scope[typeRules[0].property] = args[0];
+				aspectArgs.scope()[aspectArgs.rules()[0].property] = aspectArgs.args()[0];
 				return a5.AspectAttribute.SUCCESS;
 			}
-			var retVal = scope[typeRules[0].property] || null;
+			var retVal = aspectArgs.scope()[aspectArgs.rules()[0].property] || null;
 			return retVal === null || retVal === undefined ? a5.AspectAttribute.RETURN_NULL : retVal;
 		}	
 		
-		cls.Override.after = function(typeRules, args, scope, method, callback, callOriginator, preArgs){
-			if (preArgs.length) 
-				return scope;
+		cls.Override.after = function(aspectArgs){
+			if (aspectArgs.beforeArgs().length) 
+				return aspectArgs.scope();
 			else 				
 				return a5.AspectAttribute.SUCCESS;
 		}
@@ -1843,50 +1961,45 @@ a5.Package('a5')
 
 
 /**
- * @class 
- * @name a5.Event
+ * Base Event object in A5.
  */
 a5.Package('a5')
 
 	.Static(function(Event){
 		
-		/**#@+
-	 	 * @memberOf a5.Event
-		 */
-		
-		/**
-		 * @name DESTROYED
-		 * @constant
-		 */
 		Event.DESTROYED = 'Destroyed';
 		
-		/**#@-*/
 	})
 	.Prototype('Event', function(proto){
 		
-		/**#@+
-	 	 * @memberOf a5.Event#
-	 	 * @function
-		 */
-		
-		
-		proto.Event = function($type, $bubbles, $data){
-			this._a5_type = $type;
-			this._a5_data = $data;
+		this.Properties(function(){
+			this._a5_type = null;
+			this._a5_data = null;
 			this._a5_target = null;
 			this._a5_currentTarget = null;
 			this._a5_phase = 1;
-			this._a5_bubbles = $bubbles !== false;
+			this._a5_bubbles = false;
 			this._a5_canceled = false;
 			this._a5_cancelPending = false;
 			this._a5_shouldRetain = false;
+		})
+		
+		/**
+		 * 
+		 * @param {String} type The type identifier for the event.
+		 * @param {Boolean} [bubbles=false] Whether or not the event should use the bubbling phase.
+		 * @param {Object} [data] an optional data object to pass along with the event to registered listeners.
+		 */
+		proto.Event = function(type, bubbles, data){
+			this._a5_type = type;
+			this._a5_data = data || null;
+			this._a5_bubbles = bubbles !== false;
 		}
 		
 		
 		/**
 		 * Cancels the propagation of the event. Once this method is called, any event listeners that have not yet processed this event instance will be ignored.
-		 * #name cancel
-		 * @param {Object} finishCurrentPhase If true, the event is allowed to finish dispatching in the current phase, but will be cancelled before the next phase begins.
+		 * @param {Boolean} finishCurrentPhase If true, the event is allowed to finish dispatching in the current phase, but will be cancelled before the next phase begins.
 		 */
 		proto.cancel = function(finishCurrentPhase){
 			if(finishCurrentPhase === true)
@@ -1897,34 +2010,30 @@ a5.Package('a5')
 		
 		/**
 		 * The object that dispatched this event.
-		 * @name target
-		 * @return {Object} The object that dispatched this event.
+		 * @return {a5.Object} The object that dispatched this event.
 		 */
 		proto.target = function(){ return this._a5_target; };
 		
 		/**
 		 * The object that is currently processing this event.
-		 * @name currentTarget
-		 * @return {Object} The object that is currently processing this event.
+		 * @return {a5.Object} The object that is currently processing this event.
 		 */
 		proto.currentTarget = function(){ return this._a5_currentTarget; };
 		
 		/**
 		 * The event type.
-		 * @name type
 		 * @return {String} The event type.
 		 */
 		proto.type = function(){ return this._a5_type; };
 		
 		/**
-		 * @name data
+		 * The data object passed along with the event dispatch, if present.
 		 * @return {Object}
 		 */
 		proto.data = function(){ return this._a5_data; };
 		
 		/**
 		 * The phase this event is currently in. (a5.Event.CAPTURING, a5.Event.AT_TARGET, or a5.Event.BUBBLING)
-		 * @name phase
 		 * @return {Number} The phase this event is currently in.
 		 */
 		proto.phase = function(){ return this._a5_phase; };
@@ -1932,17 +2041,15 @@ a5.Package('a5')
 		
 		/**
 		 * Whether this event should use the bubbling phase.  All events use capture and target phases.
-		 * @name bubbles
 		 */
 		proto.bubbles = function(){ return this._a5_bubbles; };
 		
 		/**
 		 * When shouldRetain is set to true, the event instance will not be destroyed after it has finished being dispatched.
-		 * Thsi defaults to false, and it is highly recommended that you do NOT set this to true unless the same event is being
+		 * This defaults to false, and it is recommended that you do NOT set this to true unless the same event is being
 		 * dispatched on a timer, and the instance can be reused.
 		 * 
-		 * @name shouldRetain
-		 * @param {Boolean} [value=false] If set to true, the event instance will not be destroyed after it has finished being dispatched.
+		 * @param {Boolean} [value] If set to true, the event instance will not be destroyed after it has finished being dispatched.
 		 */
 		proto.shouldRetain = function(value){
 			if(typeof value === 'boolean'){
@@ -1955,45 +2062,25 @@ a5.Package('a5')
 		proto.dealloc = function(){
 			this._a5_target = this._a5_currentTarget = null;
 		}
-		
-		/**#@-*/
 });
 
 /**
- * @class 
- * @name a5.EventPhase
+ * Defines event phases for an {@link a5.Event}.
  */
 a5.Package('a5')
 
 	.Static('EventPhase', function(EventPhase){
 		
-		/**#@+
-	 	 * @memberOf a5.EventPhase
-		 */
-		
-		/**
-		 * @name CAPTURING
-		 * @constant
-		 */
 		EventPhase.CAPTURING = 1;
 		
-		/**
-		 * @name AT_TARGET
-		 * @constant
-		 */
 		EventPhase.AT_TARGET = 2;
 		
-		/**
-		 * @name BUBBLING
-		 * @constant
-		 */
 		EventPhase.BUBBLING = 3;
 });
 
 
 /**
- * @class 
- * @name a5.Error
+ * Defines a custom A5 Error.
  */
 a5.Package('a5')
 
@@ -2002,10 +2089,6 @@ a5.Package('a5')
 		
 		Error.FORCE_CAST_ERROR = '_a5_forceCastError';
 		
-		/**#@+
-	 	 * @memberOf a5.Error#
-	 	 * @function
-		 */
 		this.Properties(function(){
 			this.stack = [];
 			this.message = "";
@@ -2059,13 +2142,13 @@ a5.Package('a5')
 			}
 		}
 		
+		/**
+		 * whether the error originated from a window onerror catch statement.
+		 */
 		proto.isWindowError = function(){
 			return this._a5_isWindowError;
 		}
 		
-		/**
-		 * @name toString
-		 */
 		proto.Override.toString = function () {
 		  return this.type + ': ' + this.message;
 		}
@@ -2073,9 +2156,7 @@ a5.Package('a5')
 
 
 /**
- * @class 
- * @name a5.AssertException
- * @extends a5.Error
+ * Exceptions thrown from assert statements.
  */
 a5.Package('a5')
 	.Extends('Error')
@@ -2089,9 +2170,7 @@ a5.Package('a5')
 });
 
 /**
- * @class 
- * @name a5.ContractException
- * @extends a5.Error
+ * Exceptions thrown from contract attributes.
  */
 a5.Package('a5')
 	.Extends('Error')
@@ -2106,18 +2185,18 @@ a5.Package('a5')
 
 
 /**
- * @class The EventDispatcher class defines a prototype object for handling listeners and dispatching events.
- * <br/><b>Abstract</b>
- * @name a5.EventDispatcher
+ * Handles event listeners and dispatches events.
  */
 a5.Package("a5")
 
-	.Prototype('EventDispatcher', 'abstract', function(proto){
+	.Static(function(EventDispatcher){
 		
-		/**#@+
-	 	 * @memberOf a5.EventDispatcher#
-	 	 * @function
-		 */
+		EventDispatcher.ADD = 'eventDispatcherAdd';
+		
+		EventDispatcher.REMOVE = 'eventDispatcherRemove';
+		
+	})
+	.Prototype('EventDispatcher', 'abstract', function(proto, im, EventDispatcher){
 		
 		this.Properties(function(){
 			this._a5_autoPurge = false;
@@ -2128,6 +2207,10 @@ a5.Package("a5")
 			
 		}
 		
+		/**
+		 * Returns whether autoPurge is enabled for the dispatcher. If enabled, event listeners will be removed automatically after a valid event is dispatched.
+		 * @param {Boolean} [value] If passed, sets the value for autoPurge.
+		 */
 		proto.autoPurge = function(value){
 			if(typeof value === 'boolean'){
 				this._a5_autoPurge = value;
@@ -2137,33 +2220,32 @@ a5.Package("a5")
 		}
 		
 		/**
-		 * Adds an event listener to the parent object.
-		 * @name addEventListener
+		 * Adds an event listener to the object.
 		 * @param {String} type The event type to be added.
-		 * @param {Object} method The associated listener method to be added.
+		 * @param {Function} method The associated listener method to be added.
 		 * @param {Boolean} [useCapture=false] If set to true, the listener will process the event in the capture phase.  Otherwise, it will process the event bubbling or target phase.
-		 * @param {Boolean} [scope=null]
+		 * @param {a5.Object} [scope=null] Applies a scope value for the listener method. This is important when listening from a prototype.
 		 */
 		proto.addEventListener = function(type, method, useCapture, scope){
 			this._a5_addEventListener(type, method, useCapture, scope);
 		}
 		
 		/**
-		 * Adds an event listener to the parent object that fires only once, then is removed.
-		 * @name addOneTimeEventListener
+		 * Adds an event listener to the object that fires only once, then is removed.
 		 * @param {String} type The event type to be added.
-		 * @param {Object} method The associated listener method to be added.
+		 * @param {Function} method The associated listener method to be added.
 		 * @param {Boolean} [useCapture=false] If set to true, the listener will process the event in the capture phase.  Otherwise, it will process the event bubbling or target phase.
-		 * @param {Boolean} [scope=null]
+		 * @param {a5.Object} [scope=null] Applies a scope value for the listener method. This is important when listening from a prototype.
 		 */
 		proto.addOneTimeEventListener = function(type, method, useCapture, scope){
 			this._a5_addEventListener(type, method, useCapture, scope, true);
 		}
 		
 		/**
-		 * @name hasEventListener
-		 * @param {String} type
-		 * @param {Object} [method]
+		 * Returns whether the object has a valid listener for the associated type, and optionaly a specified listener method.
+		 * @param {String} type The event type to check.
+		 * @param {Function} [method] A listener method reference.
+		 * @return {Boolean}
 		 */
 		proto.hasEventListener = function(type, method){
 			var types = type.split('|'),
@@ -2182,18 +2264,19 @@ a5.Package("a5")
 		
 		/**
 		 * Remove a listener from the parent object.
-		 * @name removeEventListener
 		 * @param {String} type The event type to be removed.
-		 * @param {Object} method The associated listener method to be removed.
+		 * @param {Function} method The associated listener method to be removed.
 		 * @param {Boolean} [useCapture=false] Whether the listener to remove is bound to the capture phase or the bubbling phase.
+		 * @param {a5.Object} [scope]
+		 * @param {Boolean} [isOneTime=false]
 		 */
-		proto.removeEventListener = function(type, method,  $useCapture, $scope, $isOneTime){
-			var scope = $scope || null,
-				types = type.split('|'),
-				isOneTime = $isOneTime || false,
-				useCapture = $useCapture === true,
+		proto.removeEventListener = function(type, method,  useCapture, scope, isOneTime){
+			var types = type.split('|'),
 				shouldPush = true,
 				i, l, listArray, j, m;
+			scope = scope || null;
+			isOneTime = isOneTime || false;
+			useCapture = useCapture === true;
 			for (i = 0, l = types.length; i < l; i++) {
 				listArray = this._a5_getListenerArray(types[i]);
 				if (listArray) {
@@ -2210,14 +2293,14 @@ a5.Package("a5")
 						type: types.length > 1 ? types:types[0],
 						method: method,
 						useCapture: useCapture,
-						changeType: 'REMOVE'
+						changeType: EventDispatcher.REMOVE
 					});
 				}
 			}
 		}
 		
 		/**
-		 * @name removeAllListeners
+		 * Removes all existing listeners.
 		 */
 		proto.removeAllListeners = function(){
 			if(this._a5_listeners)
@@ -2226,7 +2309,6 @@ a5.Package("a5")
 		
 		/**
 		 * Returns the total number of listeners attached to the parent object.
-		 * @name getTotalListeners
 		 */
 		proto.getTotalListeners = function(type){
 			if (typeof type === 'string') {
@@ -2245,7 +2327,6 @@ a5.Package("a5")
 		
 		/**
 		 * Sends an event object to listeners previously added to the event chain. By default an event object with a target property is sent pointing to the sender. If a custom object is sent with a target property, this property will not be overridden.
-		 * @name dispatchEvent
 		 * @param {String|a5.Event} event The event object to dispatch.  Or, if a string is passed, the 'type' parameter of the event to dispatch. 
 		 */
 		proto.dispatchEvent = function(event, data, bubbles){
@@ -2259,11 +2340,10 @@ a5.Package("a5")
 		
 		/**
 		 * Override this method to be notified of listener addition or removal.
-		 * @name eListenersChange
 		 * @param {Object} e The event object
 		 * @param {String} e.type - The event type associated with the change.
 		 * @param {Object} e.method - The listener method associated with the change.
-		 * @param {String} e.changeType - Specifies what the type the change was, either 'ADD' or 'REMOVE'. 
+		 * @param {String} e.changeType - Specifies what the type the change was, either EventDispatcher.ADD or EventDispatcher.REMOVE. 
 		 */
 		proto.eListenersChange = function(e){}
 		
@@ -2302,7 +2382,7 @@ a5.Package("a5")
 				this.eListenersChange({
 					type: types.length > 1 ? types : types[0],
 					method: method,
-					changeType: 'ADD'
+					changeType: EventDispatcher.ADD
 				});
 			} else
 				throw 'invalid listener: type- ' + type + ', method- ' + method;
@@ -2360,6 +2440,7 @@ a5.Package("a5")
 		
 });
 
+
 a5.SetNamespace('a5.ErrorDefinitions', {
 	//100: root level
 	100:'invalid namespace "{namespace}", namespaces must contain only letters, numbers, or periods.',
@@ -2397,7 +2478,7 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	308:'Error processing attribute "{prop}", "{method}" must return a value.',
 	
 	//400: mixins
-	400:'invalid scope argument passed to superclass constructor on class "{nm}".',
+	400:'Mixin "{mixinNM}" requires mixing object "{instNM}" to extend class "{clsNM}" .',
 	401:'Mixin "{nm}" requires owner class to mix "{cls}".',
 	402:'Mixin "{nm}" already mixed into ancestor chain.',
 	403:'Invalid mixin: Method "{method}" defined by more than one specified mixin.',
@@ -3307,8 +3388,8 @@ a5.Package('a5.cl.core')
 						e = a5.Create(a5.Error, [e, false]);
 					if(url) e.url = url;
 					if(line) e.line = line;
-					self.dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
-					return true;
+					self.cl().dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
+					return false;
 				};
 			}
 			var orientationEvent = ("onorientationchange" in window) ? "onorientationchange" : "onresize";
@@ -3772,28 +3853,29 @@ a5.Package('a5.cl.core')
 		}
 		
 		Utils.deepClone = function(obj){
-		    if (typeof obj !== 'object' || obj == null) {
-		        return obj;
-		    }
-		    var c = obj instanceof Array ? [] : {};
-		    for (var i in obj) {
-		        var prop = obj[i];
-		        if (typeof prop == 'object') {
-		           if (prop instanceof Array) {
-		               c[i] = [];
-		               for (var j = 0, l=prop.length; j < l; j++) {
-		                   if (typeof prop[j] != 'object') c[i].push(prop[j]);
-		                   else c[i].push(obj[prop[j]]);
-		               }
-		           } else {
-		               c[i] = obj[prop];
-		           }
-		        } else {
-		           c[i] = prop;
-		        }
-		    }
-		    return c;
-		}
+              if (typeof obj !== 'object' || obj == null) {
+                  return obj;
+              }
+              var c = Utils.isArray(obj) ? [] : {};
+              for (var i in obj) {
+                  var value = obj[i];
+                  if (typeof value == 'object') {
+                     if (Utils.isArray(value)) {
+                         c[i] = [];
+                         for (var j = 0, l=value.length; j < l; j++) {
+                             if (typeof value[j] != 'object') c[i].push(value[j]);
+                             else c[i].push(Utils.deepClone(value[j]));
+                         }
+                     } else {
+                         c[i] = Utils.deepClone(value);
+                     }
+                  } else {
+                     c[i] = value;
+                  }
+              }
+              return c;
+          }
+
 		
 		Utils.initialCap = function(str){
 			return str.substr(0, 1).toUpperCase() + str.substr(1);
@@ -4649,6 +4731,7 @@ a5.Package('a5.cl.core')
 			dataCache,
 			shouldUseCache,
 			requestManager,
+			cacheBreakValue,
 			cacheTypes = [
 				{type:'html', extension:'html'},
 				{type:'html', extension:'htm'},
@@ -4666,6 +4749,11 @@ a5.Package('a5.cl.core')
 			this.superclass(this);
 			requestManager = a5.cl.core.RequestManager.instance();
 			cacheTypes = cacheTypes.concat(this.config().cacheTypes);
+			if(self.config().cacheBreak && typeof self.config().applicationBuild === 'string'){
+				var trimVal = im.Utils.trim(self.config().applicationBuild);
+				if(trimVal !== "")
+					cacheBreakValue = trimVal;
+			}
 			resources = {};
 		}
 		
@@ -4753,8 +4841,8 @@ a5.Package('a5.cl.core')
 				if (!cacheValue) {
 					if (type) {
 						url = a5.cl.core.Utils.makeAbsolutePath(checkReplacements(url));
-						if(self.config().cacheBreak && self.config().applicationBuild !== null)
-							url = url + '?a5=' + self.config().applicationBuild;
+						if(cacheBreakValue)
+							url = url + '?a5=' + cacheBreakValue;
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
@@ -5704,18 +5792,19 @@ a5.Package('a5.cl')
 	})
 	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
 		
-		var cycledCalls = {};
+		var cycledCalls = {},
+			data = {};
 		
 		cls.AjaxCallAttribute = function(){
 			cls.superclass(this);
 			
 		}
-		
-		cls.Override.before = function(rules, args, scope, method, callback){
-			args = Array.prototype.slice.call(args);
+
+		cls.Override.before = function(aspectArgs){		
 			var data = null,
+				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [];
 				argsCallback = null,
-				rules = rules.length ? rules[0] : {},
+				rules = aspectArgs.rules().length ? aspectArgs.rules()[0] : {},
 				propObj = null;
 			if (rules.takesData === true && args.length)
 				data = args.shift();
@@ -5729,24 +5818,35 @@ a5.Package('a5.cl')
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
 			var executeCall = function(){
-				scope.call(method.getName(), data, function(response){
-					args.unshift(response);
-					if(argsCallback)
-						argsCallback(args);
-					callback(args);
-				}, propObj);
+				if (rules.cacheResponse && getData(aspectArgs.method())) {
+					setTimeout(function(){
+						args.unshift(getData(aspectArgs.method()));
+						if (argsCallback) 
+							argsCallback(args);
+						aspectArgs.callback()(args);
+					}, 0);
+				} else {	
+					aspectArgs.scope().call(aspectArgs.method().getName(), data, function(response){
+						if (rules.cacheResponse)
+							storeData(aspectArgs.method(), response);
+						args.unshift(response);
+						if (argsCallback) 
+							argsCallback(args);
+						aspectArgs.callback()(args);
+					}, propObj);
+				}
 			}
 			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
-				if (method._cl_cycleID) {
-					clearInterval(method._cl_cycleID);
-					delete method._cl_cycleID;
+				if (aspectArgs.method()._cl_cycleID) {
+					clearInterval(aspectArgs.method()._cl_cycleID);
+					delete aspectArgs.method()._cl_cycleID;
 				}
 				return a5.Attribute.ASYNC;
 			}
 			if (rules.cycle) {
-				if (!method._cl_cycleID) {
-					method._cl_cycleID = setInterval(function(){
-						method.apply(scope, args);
+				if (!aspectArgs.method()._cl_cycleID) {
+					aspectArgs.method()._cl_cycleID = setInterval(function(){
+						aspectArgs.method().apply(aspectArgs.scope(), args);
 					}, rules.cycle);
 					executeCall();
 				} else {
@@ -5757,6 +5857,14 @@ a5.Package('a5.cl')
 			}
 			return a5.Attribute.ASYNC;
 		}	
+		
+		var getData = function(method){
+			return data[method.getClassInstance().instanceUID() + "_" + method.getName()];
+		}	
+		
+		var storeData = function(method, value){
+			data[method.getClassInstance().instanceUID() + "_" + method.getName()] = value;
+		}
 })
 
 /**
@@ -5770,14 +5878,12 @@ a5.Package('a5.cl')
 		cls.BoundAjaxReturnAttribute = function(){
 			cls.superclass(this);
 		}
-		
-		cls.Override.before = function(rules, args, scope, method, callback){
-			if (rules.length && rules[0].receiverMethod !== undefined) {
-				var method = rules[0].receiverMethod;
-				method.call(null, args[0]);
-			} else {
-				scope.notifyReceivers(args[0], method.getName());
-			}
+
+		cls.Override.before = function(aspectArgs){
+			if (aspectArgs.rules().length && aspectArgs.rules()[0].receiverMethod !== undefined) 
+				aspectArgs.rules()[0].receiverMethod.call(null, aspectArgs.args()[0]);
+			else
+				aspectArgs.scope().notifyReceivers(aspectArgs.args()[0], aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
 	})

@@ -93,20 +93,13 @@ a5.cl.CreateCallback = function(callback){
 
 
 /**
- * @class Base class for all classes in the AirFrame CL MVC framework. 
- * <br/><b>Abstract</b>
- * @name a5.cl.CLBase
- * @extends a5.CLEventDispatcher
+ * Base class for all classes in an A5 CL application. 
  */
 a5.Package('a5.cl')
 
 	.Extends('a5.EventDispatcher')
 	.Prototype('CLBase', function(proto){
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLBase#
-	 	 * @function
-		 */	
 		this.Properties(function(){
 			this._cl_mvcName = null;
 		})
@@ -116,26 +109,25 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * @name cl
-		 * @return
-		 * @type a5.cl.MVC#
+		 * Returns a reference to the CL application instance.
+		 * @return {a5.cl.CL}
 		 */
 		proto.cl = function(){
 			return a5.cl.instance();
 		}
 		
 		/**
-		 * Returns an instance of the class defined by the following parameters:
-		 * @name getClassInstance
-		 * @param {String} type One of 'Domain', 'Service', or 'Controller'
-		 * @param {String} className The functional name of the class. For example, if you class is called 'FooController', the className value would be 'Foo'. 
+		 * Returns an instance of the class defined by the specified parameters
+		 * @param {String} type A string value representing the type of class to instantiate. 'Service' is available by default, add-ons may register additional type names for instantiation. 
+		 * @param {String} className The functional name of the class. For example, if you class is called 'FooService', the className value would be 'Foo'. 
 		 */
 		proto.getClassInstance = function(type, className){
 			return this.cl()._core().instantiator().getClassInstance(type, className);
 		}
 		
 		/**
-		 * @name log
+		 * Sends a log value to any registered logging plugins, or the console if available.
+		 * @param {Object} value
 		 */
 		proto.log = function(value){
 			var plgn = this.plugins().getRegisteredProcess('logger');
@@ -146,6 +138,10 @@ a5.Package('a5.cl')
 					console.log.apply(console, arguments);
 		}
 		
+		/**
+		 * Sends a warn value to any registered logging plugins, or the console if available.
+		 * @param {Object} value
+		 */
 		proto.warn = function(value){
 			var plgn = this.plugins().getRegisteredProcess('logger');
 			if (plgn) 
@@ -160,23 +156,24 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * Returns the configuration object.
-		 * @name config
+		 * Returns a reference to the configuration object for the A5 CL application instance.
+		 * @return {a5.cl.CLConfig}
 		 */
 		proto.config = function(){
 			return this.cl().config();
 		}
 		
 		/**
-		 * @name plugins
+		 * Returns a reference to the plugins object for the A5 CL application instance.
+		 * @return {Object}
 		 */
 		proto.plugins = function(){
 			return this.cl().plugins();
 		}
 		
 		/**
-		 * Returns the appParams object as specified in the config object
-		 * @name appParams
+		 * Returns a reference to the appParams object for the A5 CL application instance.
+		 * @return {Object}
 		 */
 		proto.appParams = function(){
 			return this.cl().appParams();
@@ -186,6 +183,9 @@ a5.Package('a5.cl')
 
 
 
+/**
+ * Defines an error in A5 CL.
+ */
 a5.Package('a5.cl')
 
 	.Extends('a5.Error')
@@ -200,26 +200,23 @@ a5.Package('a5.cl')
 
 
 /**
- * @class Worker class instance, performs a task on a worker thread when available or in the browser thread when not.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLWorker
- * @extends a5.CLEventDispatcher
+ * Worker class instance, performs a task on a worker thread when available or in the browser thread when not.
  */
 a5.Package('a5.cl')
 	
 	.Extends('CLBase')
 	.Prototype('CLWorker', 'abstract', function(proto, im){
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLWorker#
-	 	 * @function
-		 */
+		this.Properties(function(){
+			this._cl_communicator = null;
+			this._cl_JSON = null;
+			this._cl_isWorker = false;
+		})
 		
 		proto.CLWorker = function(isWorker){
 			proto.superclass(this);
 			if(this.isSingleton())
 				this.throwError("Workers cannot be singletons.");
-			this._cl_communicator = null;
 			this._cl_JSON = a5.cl.core.JSON || JSON;
 			this._cl_isWorker = (isWorker === '_cl_isWorkerInitializer');
 			if (!this._cl_isWorker) 
@@ -348,6 +345,20 @@ a5.Package('a5.cl')
 		}			
 });
 
+a5.Package('a5.cl')
+
+	.Extends('a5.Attribute')
+	.Class('WorkerMethod', function(cls, im, WorkerMethod){
+		
+		cls.WorkerMethod = function(){
+			cls.superclass(this);
+		}		
+		
+		cls.Override.before = function(){
+			
+		}
+})
+
 
 a5.Package('a5.cl')
 
@@ -364,10 +375,6 @@ a5.Package('a5.cl')
 })
 
 
-/**
- * @class 
- * @name a5.cl.CLEvent
- */
 a5.Package('a5.cl')
 	
 	.Extends('a5.Event')
@@ -414,6 +421,9 @@ a5.Package('a5.cl')
 		 */
 		CLEvent.PLUGINS_LOADED = 'pluginsLoaded';
 		
+		/**
+		 * 
+		 */
 		CLEvent.APPLICATION_PREPARED = 'applicationPrepared';
 		
 		/**
@@ -454,13 +464,6 @@ a5.Package('a5.cl')
 		 * @description Dispatched when the window is resized.
 		 */
 		CLEvent.WINDOW_RESIZED = 'windowResized';
-		
-		/**
-		 * @event
-		 * @param {Array} parsedLinks
-		 * @description Dispatched when the address bar hash changes
-		 */
-		CLEvent.HASH_CHANGE = 'hashChange';
 		
 		/**
 		 * @event
@@ -506,24 +509,6 @@ a5.Package('a5.cl')
 		 */
 		CLEvent.APPLICATION_ERROR = 'applicationError';
 		
-		/**
-		 * @event
-		 * @description Dispatched when the render() method is called on a mappable controller.
-		 * @param {a5.cl.CLController} controller
-		 */
-		CLEvent.RENDER_CONTROLLER = 'renderController';
-		
-		/**
-		 * @event
-		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
-		 */
-		CLEvent.ADDED_TO_PARENT = 'addedToParent';
-		
-		/**
-		 * @event
-		 * @description Dispatched by CLViews when they are added to a parent view.  This event is useful for detecting when children are added to a specific branch of the view tree.
-		 */
-		CLEvent.REMOVED_FROM_PARENT = 'removedFromParent';
 	})
 	.Prototype('CLEvent', function(proto, im){
 		
@@ -910,8 +895,8 @@ a5.Package('a5.cl.core')
 						e = a5.Create(a5.Error, [e, false]);
 					if(url) e.url = url;
 					if(line) e.line = line;
-					self.dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
-					return true;
+					self.cl().dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
+					return false;
 				};
 			}
 			var orientationEvent = ("onorientationchange" in window) ? "onorientationchange" : "onresize";
@@ -1050,6 +1035,12 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	allowUntestedPlugins:false,
 	
 	/**
+	 * @type String
+	 * @default null
+	 */
+	applicationBuild:null,
+	
+	/**
 	 * @field
 	 * @type  String 
 	 * @name a5.cl.CLConfig#appName
@@ -1072,6 +1063,12 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 * @default 'views/'
 	 */
 	applicationViewPath:'views/',
+	
+	/**
+	 * @type Boolean
+	 * @default false
+	 */
+	cacheBreak:false,
 	
 	/**
 	 * @field
@@ -1363,28 +1360,29 @@ a5.Package('a5.cl.core')
 		}
 		
 		Utils.deepClone = function(obj){
-		    if (typeof obj !== 'object' || obj == null) {
-		        return obj;
-		    }
-		    var c = obj instanceof Array ? [] : {};
-		    for (var i in obj) {
-		        var prop = obj[i];
-		        if (typeof prop == 'object') {
-		           if (prop instanceof Array) {
-		               c[i] = [];
-		               for (var j = 0, l=prop.length; j < l; j++) {
-		                   if (typeof prop[j] != 'object') c[i].push(prop[j]);
-		                   else c[i].push(obj[prop[j]]);
-		               }
-		           } else {
-		               c[i] = obj[prop];
-		           }
-		        } else {
-		           c[i] = prop;
-		        }
-		    }
-		    return c;
-		}
+              if (typeof obj !== 'object' || obj == null) {
+                  return obj;
+              }
+              var c = Utils.isArray(obj) ? [] : {};
+              for (var i in obj) {
+                  var value = obj[i];
+                  if (typeof value == 'object') {
+                     if (Utils.isArray(value)) {
+                         c[i] = [];
+                         for (var j = 0, l=value.length; j < l; j++) {
+                             if (typeof value[j] != 'object') c[i].push(value[j]);
+                             else c[i].push(Utils.deepClone(value[j]));
+                         }
+                     } else {
+                         c[i] = Utils.deepClone(value);
+                     }
+                  } else {
+                     c[i] = value;
+                  }
+              }
+              return c;
+          }
+
 		
 		Utils.initialCap = function(str){
 			return str.substr(0, 1).toUpperCase() + str.substr(1);
@@ -2240,10 +2238,12 @@ a5.Package('a5.cl.core')
 			dataCache,
 			shouldUseCache,
 			requestManager,
+			cacheBreakValue,
 			cacheTypes = [
 				{type:'html', extension:'html'},
 				{type:'html', extension:'htm'},
 				{type:'js', extension:'js'},
+				{type:'text', extension:'txt'},
 				{type:'image', extension:'jpg'},
 				{type:'image', extension:'gif'},
 				{type:'image', extension:'png'},
@@ -2256,6 +2256,11 @@ a5.Package('a5.cl.core')
 			this.superclass(this);
 			requestManager = a5.cl.core.RequestManager.instance();
 			cacheTypes = cacheTypes.concat(this.config().cacheTypes);
+			if(self.config().cacheBreak && typeof self.config().applicationBuild === 'string'){
+				var trimVal = im.Utils.trim(self.config().applicationBuild);
+				if(trimVal !== "")
+					cacheBreakValue = trimVal;
+			}
 			resources = {};
 		}
 		
@@ -2305,7 +2310,6 @@ a5.Package('a5.cl.core')
 						type = urlObj[1];
 					}
 				}
-				url = a5.cl.core.Utils.makeAbsolutePath(checkReplacements(url));
 				
 				function completeLoad(retValue){
 					a5._a5_createQueuedPrototypes();
@@ -2340,9 +2344,12 @@ a5.Package('a5.cl.core')
 						}
 					}
 				}
-				if (type) {
-					var cacheValue = checkCache(url);
-					if (!cacheValue) {
+				var cacheValue = checkCache(url);
+				if (!cacheValue) {
+					if (type) {
+						url = a5.cl.core.Utils.makeAbsolutePath(checkReplacements(url));
+						if(cacheBreakValue)
+							url = url + '?a5=' + cacheBreakValue;
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
@@ -2420,13 +2427,13 @@ a5.Package('a5.cl.core')
 							requestManager.makeRequest(reqObj)
 						}
 					} else {
-						if(cacheValue === ResourceCache.BROWSER_CACHED_ENTRY)
+						throw 'Unknown include type for included file "' + url + '".';
+					}
+				} else {
+					if(cacheValue === ResourceCache.BROWSER_CACHED_ENTRY)
 							continueLoad(null);
 						else
 							continueLoad(cacheValue);
-					}
-				} else {
-					throw 'Unknown include type for included file "' + url + '".';
 				}			
 			}
 		}
@@ -2699,29 +2706,24 @@ a5.Package('a5.cl.core')
 
 
 /**
- * @class Mixin class for providing data storage hooks. DataStore applies a uniqe ID prefix on key values, removing the need to assure uniqueness of keys in your application. Key prefixes are unique to the class in which they are referenced.
- * <br/><b>Abstract</b>
- * @name a5.cl.mixins.DataStore
- * @extends a5.cl.CLBase
+ * Mixin class for providing data storage hooks. DataStore applies a uniqe ID prefix on key values, removing the need to 
+ * assure uniqueness of keys in your application. Key prefixes are unique to the class in which they are referenced.
  */
 a5.Package('a5.cl.mixins')
 	.Import('a5.cl.core.DataCache')
 	.Mixin('DataStore', function(proto, im, DataStore){
-
-		/**#@+
-	 	 * @memberOf a5.cl.mixins.DataStore#
-	 	 * @function
-		 */	
 		
-		proto.DataStore = function(){
+		this.Properties(function(){
 			this._cl_cacheKeyValidated = false;
 			this._cl_prefix = null;
 			this._cl_validatedPrefix = null;
+		})
+		
+		proto.DataStore = function(){
 		}
 		
 		/**
 		 * Returns whether caching has previously been set by the application on the client and values are available for retrieval.
-		 * @name cacheExists
 		 * @returns {Boolean}
 		 */
 		proto.cacheExists = function(){
@@ -2729,8 +2731,9 @@ a5.Package('a5.cl.mixins')
 		}
 		
 		/**
-		 * Stores a value uniquely keyed in the localStorage cache. 
-		 * @name storeValue
+		 * Stores a value uniquely keyed in the localStorage cache.
+		 * @param {String} key
+		 * @param {String} value
 		 * @returns {Boolean} success
 		 */
 		proto.storeValue = function(key, value){
@@ -2739,6 +2742,10 @@ a5.Package('a5.cl.mixins')
 			else return false;
 		}
 		
+		/**
+		 * Specifies a predefined prefix name for values when stored in localStorage.
+		 * @param {Object} value
+		 */
 		proto.keyPrefix = function(value){
 			if(typeof value === 'string'){
 				this._cl_prefix = value;
@@ -2749,8 +2756,8 @@ a5.Package('a5.cl.mixins')
 		
 		/**
 		 * Retrieves a value for the specified key from the client data store.
-		 * @name getValue
-		 * @returns {*} False if failure
+		 * @param key {String}
+		 * @returns {Object} False if failure
 		 */
 		proto.getValue = function(key){
 			if(im.DataCache.isAvailable()) 
@@ -2760,7 +2767,7 @@ a5.Package('a5.cl.mixins')
 		
 		/**
 		 * Removes the value for the specified key from the client data store.
-		 * @name clearValue
+		 * @param key {String}
 		 */
 		proto.clearValue = function(key){
 			if(im.DataCache.isAvailable()) 
@@ -2770,7 +2777,6 @@ a5.Package('a5.cl.mixins')
 		
 		/**
 		 * Clears all key/value pairs associated with the class in which the method is called.
-		 * @name clearScopeValues
 		 * @param {Array} [exceptions] An array of keys to leave untouched when clearing.
 		 */
 		proto.clearScopeValues = function(exceptions){
@@ -2799,16 +2805,29 @@ a5.Package('a5.cl.mixins')
 });	
 
 
+/**
+ * Adds capabilities to a class to be a data source for a binding.
+ */
 a5.Package('a5.cl.mixins')
 	.Mixin('BindableSource', function(mixin, im){
 		
-		mixin.BindableSource = function(){
-			this._cl_receivers = [];
+		this.Properties(function(){
+			this._cl_receivers = null;
 			this._cl_bindParamType = null;
 			this._cl_bindParamRequired = false;
 			this._cl_bindParamCallback = null;
+		})
+		
+		mixin.BindableSource = function(){
+			this._cl_receivers = [];
 		}
 		
+		/**
+		 * 
+		 * @param {String} type
+		 * @param {Boolean} required
+		 * @param {Function} callback
+		 */
 		mixin.bindParamProps = function(type, required, callback){
 			this._cl_bindParamType = type;
 			if(required !== undefined) this._cl_bindParamRequired = required;
@@ -2816,14 +2835,27 @@ a5.Package('a5.cl.mixins')
 			return this;
 		}
 		
+		/**
+		 * Returns the data type of the param binding, specified in bindParamProps.
+		 * @return {String}
+		 */
 		mixin.bindParamType = function(){
 			return this._cl_bindParamType;
 		}
 		
+		/**
+		 * Returns whether a param is required for a binding, specified in bindParamProps.
+		 * @return {String}
+		 */
 		mixin.bindParamRequired = function(){
 			return this._cl_bindParamRequired;
 		}
 		
+		/**
+		 * Sends data to registered binding receivers.
+		 * @param {Object} data The data to send.
+		 * @param {Object} params Parameter data, based on values set in bindParamProps.
+		 */
 		mixin.notifyReceivers = function(data, params){	
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
@@ -2890,14 +2922,25 @@ a5.Package('a5.cl.mixins')
 
 
 
+/**
+ * Adds capabilities to a class to manage bindings.
+ */
 a5.Package('a5.cl.mixins')
 	.Mixin('Binder', function(mixin, im){
 		
-		mixin.Binder = function(){
+		this.Properties(function(){
 			this._cl_bindingsConnected = true;
+			this._cl_bindings = [];
+		});
+		
+		mixin.Binder = function(){
 			this._cl_bindings = [];
 		}
 		
+		/**
+		 * Sets whether bindings are currently enabled. If set to false, all bindings are suspended, unless a binding has its persist value set to true.
+		 * @param {Boolean} value
+		 */
 		mixin.setBindingEnabled = function(value){
 			if (value !== this._cl_bindingsConnected) {
 				for (var i = 0, l = this._cl_bindings.length; i < l; i++) {
@@ -2912,10 +2955,23 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
+		/**
+		 * Returns whether bindings are active.
+		 * @return {Boolean}
+		 */
 		mixin.bindingsConnected = function(){
 			return this._cl_bindingsConnected;
 		}
 		
+		/**
+		 * Creates a bind between a data source and a receiver.
+		 * @param {a5.cl.mixins.BindableSource} source
+		 * @param {a5.cl.interfaces.IBindableReceiver} receiver
+		 * @param {Object} params Parameters for the binding source, as specified by the receiver.
+		 * @param {Object} [mapping] If specified, remaps properties by name to new values. 
+		 * @param {Object} [scope] Defines a scope to call the bind receiver in.
+		 * @param {Object} [persist=false] If set to true, the binding will remain active if bindings are set to disabled.
+		 */
 		mixin.bind = function(source, receiver, params, mapping, scope, persist){
 			if(!this._cl_checkBindExists(source, receiver, params)){
 				if(source.isA5ClassDef())
@@ -2958,6 +3014,12 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
+		/**
+		 * Removes a given binding, if it exists.
+		 * @param {a5.cl.mixins.BindableSource} source
+		 * @param {a5.cl.interfaces.IBindableReceiver} receiver
+		 * @throws 
+		 */
 		mixin.unbind = function(source, receiver){
 			var found = false;
 			for(var i = 0, l = this._cl_bindings.length; i<l; i++){
@@ -2986,34 +3048,30 @@ a5.Package('a5.cl.mixins')
 
 
 /**
- * @class Base class for service handlers in the AirFrame CL framework.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLService
- * @extends a5.cl.CLBase
+ * Base class for service consumers in A5 CL.
  */
 a5.Package('a5.cl')
 
 	.Extends('CLBase')
-	.Prototype('CLService', 'abstract', function(proto, im){
+	.Prototype('CLService', 'abstract', function(proto, im){	
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLService#
-	 	 * @function
-		 */		
-		
-		proto.CLService = function(){
-			proto.superclass(this);
+		this.Properties(function(){
 			this._cl_url = null;
 			this._cl_isJson = true;
-		}
+		})
 		
-
-		proto.initialize = function(url){
+		/**
+		 * Constructor for CLService
+		 * @param {String} url The url of the service endpoint.
+		 */
+		proto.CLService = function(url){
+			proto.superclass(this);
 			this._cl_url = url;
 		}
 		
 		/**
-		 * @name url
+		 * Returns the url of the service endpoint, respecting the serviceURLRewriter plugin process if associated.
+		 * @return {String}
 		 */
 		proto.url = function(){
 			var plgn = this.plugins().getRegisteredProcess('serviceURLRewriter');
@@ -3023,8 +3081,9 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * @name isJson
-		 * @param {Boolean} [value]
+		 * Getter/Setter method for the default setting for the consumer endpoint for JSON parsing.
+		 * @param {Boolean} [value] If passed, sets the value.
+		 * @return {Boolean|a5.cl.CLService} if a value is passed, returns a reference to the object instance for chaining, otherwise returns the value.
 		 */
 		proto.isJson = function(value){
 			if(value !== undefined) this._cl_isJson = value;
@@ -3041,66 +3100,56 @@ a5.Package('a5.cl')
 		cls.SerializableAttribute = function(){
 			
 		}
-		
-		cls.Override.instanceProcess = function(rules, instance){
-		
-		}
 })
 
 
 /**
- * @class Base class for web sockets in the AirFrame CL framework.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLSocket
- * @extends a5.cl.CLService
+ * Base class for web socket consumers in the A5 CL framework.
  */
 a5.Package('a5.cl')
-
+	
+	.Import('a5.cl.core.JSON')
 	.Extends('CLService')
-	.Prototype('CLSocket', 'abstract', function(proto, im, CLSocket){
+	.Static(function(CLSocket){
 		
+		/**
+		 * Returns whether the application context has support for the HTML5 WebSocket API, required for CLSocket usage.
+		 */
 		CLSocket.supportsSockets = function(){
 			return 'WebSocket' in window ? true : false;
-		}
+		}	
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLSocket#
-	 	 * @function
-		 */		
+	})
+	.Prototype('CLSocket', 'abstract', function(proto, im, CLSocket){
 		
-		proto.CLSocket = function(){
-			proto.superclass(this);
+		this.Properties(function(){
 			this._cl_socket = null;
-			var self = this;
-			this._cl_socketOnMessage = function(e){
-				var data = self.isJson() ? a5.cl.core.JSON.parse(e.data):e.data;
-				self.dataReceived(data);
-			}
-		}
+			this._cl_socketOnMessage = null;
+		})
 		
 		/**
-		 * 
-		 * @name initialize
-		 * @param {String} url
-		 * @return {Boolean} success
+		 * Constructor for a CLSocket instance.
+		 * @param {String} url The location of the socket endpoint.
 		 */
-		proto.Override.initialize = function(url){
-			if (this.supportsSockets()){
+		proto.CLSocket = function(url){
+			proto.superclass(this, [url]);
+			if (CLSocket.supportsSockets()) {
 				this._cl_socket = new WebSocket(url);
-				return true;
-			} else {
-				return false;
+				var self = this;
+				this._cl_socketOnMessage = function(e){
+					var data = self.isJson() ? im.JSON.parse(e.data) : e.data;
+					self.dataReceived(data);
+				}
 			}
 		}
 		
 		/**
-		 * Performs a call on the socket. createSocket must be called first.
-		 * @name send
+		 * Performs a call on the socket endpoint.
 		 * @param {String} message The message to send to the socket.
 		 * @param {Function} [callback] A function to pass returned results to.
 		 */
 		proto.send = function(m, callback){
-			if (this.supportsSockets()) {
+			if (CLSocket.supportsSockets()) {
 				var self = this;
 				self._cl_socket.onmessage = self._cl_socketOnMessage;
 				var sendMsg = function(){
@@ -3134,38 +3183,28 @@ a5.Package('a5.cl')
 		
 		
 		/**
-		 * @name dataReceived
-		 * @param {String}Object} message
+		 * Override to receive data from the socket connection.
+		 * @param {String|Object} message The returned data, either an object or a string depending on the value of the isJson setting.
 		 */
 		proto.dataReceived = function(data){
 			
 		}
 		
 		/**
-		 * @name supportsSockets
-		 */
-		proto.supportsSockets = function(){
-			return CLSocket.supportsSockets;
-		}
-		
-		/**
-		 * @name close
+		 * Closes the socket connection.
 		 */
 		proto.close = function(){
 			if(this._cl_socket) this._cl_socket.close();
 		}	
 		
 		proto.dealloc = function(){
-			if(this._cl_socket && this._cl_socket.readyState === 2) this.closeSocket();
+			if(this._cl_socket && this._cl_socket.readyState === 2) this.close();
 		}
 });
 
 
 /**
- * @class Base class for Ajax handlers.
- * <br/><b>Abstract</b>
- * @name a5.cl.CLAjax
- * @extends a5.cl.CLService
+ * Base class for Ajax endpoint consumers.
  */
 a5.Package('a5.cl')
 
@@ -3173,37 +3212,28 @@ a5.Package('a5.cl')
 	.Mix('a5.cl.mixins.BindableSource')
 	.Prototype('CLAjax', 'abstract', function(proto, im){
 		
-		/**#@+
-	 	 * @memberOf a5.cl.CLAjax#
-	 	 * @function
-		 */	
-		
-		proto.CLAjax = function(){
-			proto.superclass(this);
+		this.Properties(function(){
 			this._cl_ajaxStruct = null;
 			this._cl_silent = false;
-		}
+		})
 		
 		/**
 		 * Defines the default properties for the service endpoint.
-		 * @name initialize
 		 * @param {String} url The service endpoint without a method specified, used as a prefix to all method values passed in call method.
 		 * @param {Object} props Properties object, see {@link a5.cl.CLAjax#call} for more info.
 		 */
-		proto.Override.initialize = function(url, props){
-			proto.superclass().initialize.call(this, url);
+		proto.CLAjax = function(url, props){
+			proto.superclass(this, [url]);
 			this._cl_ajaxStruct = props;
 		}
 				
 		/**
 		 * Performs a call on the service. initialize must be called first.
-		 * @name call
-		 * @type Number
-		 * @returns The request ID.
 		 * @param {String} method The method to call on the endpoint. An empty string or null may be passed to call services that do not define methods.
 		 * @param {Object} [data] A data object to pass as JSON. 
 		 * @param {Function} [callback] A function to pass returned results to.
 		 * @param {Object} [props] Call props object.
+		 * @returns {Number} The request ID.
 		 */
 		proto.call = function(m, data, callback, props){
 			//TODO: enforceContract to allow overload with no method, or no data
@@ -3235,7 +3265,6 @@ a5.Package('a5.cl')
 		
 		/**
 		 * Aborts all calls associated with the service.
-		 * @name abort
 		 * @param {Number} [id] A specific request ID to abort instead of aborting all pending requests.
 		 */
 		proto.abort = function(id){
@@ -3244,7 +3273,7 @@ a5.Package('a5.cl')
 		
 		/**
 		 * Gets or sets the silent property.  When set to true, requests will not trigger ASYNC_START and ASYNC_COMPLETE events.
-		 * @param {Object} value
+		 * @param {Boolean} value
 		 */
 		proto.silent = function(value){
 			if(typeof value === 'boolean'){
@@ -3255,51 +3284,76 @@ a5.Package('a5.cl')
 		}
 });
 
+
+/**
+ * Adds ajax call wrapping logic to a method. Calls to methods with this attribute are assumed to execute a call
+ * to a method on the endpoint of the same name.
+ */
 a5.Package('a5.cl')
 
 	.Extends('a5.Attribute')
-	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
+	.Static(function(AjaxCallAttribute){
 		
 		AjaxCallAttribute.CANCEL_CYCLE	= 'ajaxCallAttributeCancelCycle';
 		
-		var cycledCalls = {};
+	})
+	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
+		
+		var cycledCalls = {},
+			data = {};
 		
 		cls.AjaxCallAttribute = function(){
 			cls.superclass(this);
 			
 		}
-		
-		cls.Override.methodPre = function(rules, args, scope, method, callback){
-			args = Array.prototype.slice.call(args);
+
+		cls.Override.before = function(aspectArgs){		
 			var data = null,
+				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [];
 				argsCallback = null,
-				rules = rules.length ? rules[0] : {},
+				rules = aspectArgs.rules().length ? aspectArgs.rules()[0] : {},
 				propObj = null;
 			if (rules.takesData === true && args.length)
 				data = args.shift();
 			if(rules.props)
 				propObj = rules.props;
+			if(rules.hasErrorCallback){
+				if(!propObj)
+					propObj= {};
+				propObj.error = args.pop();	
+			}
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
 			var executeCall = function(){
-				scope.call(method.getName(), data, function(response){
-					args.unshift(response);
-					if(argsCallback)
-						argsCallback(args);
-					callback(args);
-				}, propObj);
+				if (rules.cacheResponse && getData(aspectArgs.method())) {
+					setTimeout(function(){
+						args.unshift(getData(aspectArgs.method()));
+						if (argsCallback) 
+							argsCallback(args);
+						aspectArgs.callback()(args);
+					}, 0);
+				} else {	
+					aspectArgs.scope().call(aspectArgs.method().getName(), data, function(response){
+						if (rules.cacheResponse)
+							storeData(aspectArgs.method(), response);
+						args.unshift(response);
+						if (argsCallback) 
+							argsCallback(args);
+						aspectArgs.callback()(args);
+					}, propObj);
+				}
 			}
 			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
-				if (method._cl_cycleID) {
-					clearInterval(method._cl_cycleID);
-					delete method._cl_cycleID;
+				if (aspectArgs.method()._cl_cycleID) {
+					clearInterval(aspectArgs.method()._cl_cycleID);
+					delete aspectArgs.method()._cl_cycleID;
 				}
 				return a5.Attribute.ASYNC;
 			}
 			if (rules.cycle) {
-				if (!method._cl_cycleID) {
-					method._cl_cycleID = setInterval(function(){
-						method.apply(scope, args);
+				if (!aspectArgs.method()._cl_cycleID) {
+					aspectArgs.method()._cl_cycleID = setInterval(function(){
+						aspectArgs.method().apply(aspectArgs.scope(), args);
 					}, rules.cycle);
 					executeCall();
 				} else {
@@ -3310,8 +3364,19 @@ a5.Package('a5.cl')
 			}
 			return a5.Attribute.ASYNC;
 		}	
+		
+		var getData = function(method){
+			return data[method.getClassInstance().instanceUID() + "_" + method.getName()];
+		}	
+		
+		var storeData = function(method, value){
+			data[method.getClassInstance().instanceUID() + "_" + method.getName()] = value;
+		}
 })
 
+/**
+ * Associates a method on a CLAjax instance as associated with a bind configuration from {@link a5.cl.mixins.Binder}
+ */
 a5.Package('a5.cl')
 
 	.Extends('a5.AspectAttribute')
@@ -3320,14 +3385,12 @@ a5.Package('a5.cl')
 		cls.BoundAjaxReturnAttribute = function(){
 			cls.superclass(this);
 		}
-		
-		cls.Override.before = function(rules, args, scope, method, callback){
-			if (rules.length && rules[0].receiverMethod !== undefined) {
-				var method = rules[0].receiverMethod;
-				method.call(null, args[0]);
-			} else {
-				scope.notifyReceivers(args[0], method.getName());
-			}
+
+		cls.Override.before = function(aspectArgs){
+			if (aspectArgs.rules().length && aspectArgs.rules()[0].receiverMethod !== undefined) 
+				aspectArgs.rules()[0].receiverMethod.call(null, aspectArgs.args()[0]);
+			else
+				aspectArgs.scope().notifyReceivers(aspectArgs.args()[0], aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
 	})
@@ -3335,47 +3398,44 @@ a5.Package('a5.cl')
 
 
 /**
- * @class 
- * @name a5.cl.CLPlugin
- * @extends a5.cl.CLBase
+ * Defines a plugin for an A5 CL application.
  */
 a5.Package('a5.cl')
 
 	.Extends('CLBase')
 	.Prototype('CLPlugin', 'abstract', function(proto, im){
-		
-		/**#@+
-	 	 * @memberOf a5.cl.CLPlugin#
-	 	 * @function
-		 */		
-		
-		proto.CLPlugin = function(){
-			proto.superclass(this);
+			
+		this.Properties(function(){
 			this._cl_pluginConfig = null;
 			this._cl_configDefaults = {};
 			this._cl_requiredVersion = '0';
 			this._cl_maxVerifiedVersion = null;
 			this._cl_requires = [];
+		})
+		
+		proto.CLPlugin = function(){
+			proto.superclass(this);
 		}
 		
 		/**
-		 * @name pluginConfig
+		 * Returns the plugin configuration object, merging default values with overrides from the application CLMain instance.
+		 * @return {Object}
 		 */
 		proto.pluginConfig = function(){
 			return this._cl_pluginConfig;
 		}
 		
 		/**
-		 * @name requires
-		 * @param {Object} val
+		 * Specifies a require class or package for the plugin.
+		 * @param {String} val
 		 */
 		proto.requires = function(val){
 			this._cl_requires.push(val);
 		}
 		
 		/**
-		 * @name requiredVersion
-		 * @param {Object} value
+		 * Specifies a required minimum version of A5 CL for the plugin.
+		 * @param {String} value
 		 */
 		proto.requiredVersion = function(value){
 			if(value !== undefined) this._cl_requiredVersion = value;
@@ -3383,8 +3443,9 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * @name maxVerifiedVersion
-		 * @param {Object} value
+		 * Specifies a maximum version of A5 CL that the plugin has been validated for. Setting allowUntestedPlugins to true on A5 CL config
+		 * will allow a plugin to run in CL with a version number higher than this specified value.
+		 * @param {String} value
 		 */
 		proto.maxVerifiedVersion = function(value){
 			if(value !== undefined) this._cl_maxVerifiedVersion = value;
@@ -3392,7 +3453,8 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * @name configDefaults
+		 * Sets the default config params and their values for the plugin.
+		 * @param {Object} value
 		 */
 		proto.configDefaults = function(value){
 			 if(value !== undefined)
@@ -3402,13 +3464,13 @@ a5.Package('a5.cl')
 		
 		
 		/**
-		 * @name initializePlugin
+		 * Initialization method for the plugin, called when all plugins have been loaded. Override does not require super call. 
 		 */
 		proto.initializePlugin = function(){}
 		
 		/**
-		 * @name registerForProcess
-		 * @param {Object} type
+		 * Associates the plugin with the specified registerable plugin process, either of the A5 CL framework directly or of an addon that specifies its own registrable processes.
+		 * @param {String} type
 		 */
 		proto.registerForProcess = function(type){
 			this.cl()._core().pluginManager().registerForProcess(type, this);
@@ -3431,64 +3493,82 @@ a5.Package('a5.cl')
 
 
 /**
- * @class 
- * @name a5.cl.CLAddon
- * @extends a5.cl.CLPlugin
+ * CLAddons are top level member plugins for A5 CL. CLAddons augment the plugin model by allowing for custom configuration rules,
+ * the ability to define custom registrable processes for other plugins, and the ability register custom class types for auto instantiation.
  */
 a5.Package('a5.cl')
 
 	.Extends('CLPlugin')
 	.Prototype('CLAddon', 'abstract', function(proto, im, CLAddon){
 		
-		CLAddon.INITIALIZE_COMPLETE = 'clAddonInitializeComplete';
-		
-		/**#@+
-	 	 * @memberOf a5.cl.CLAddon#
-	 	 * @function
-		 */		
+		/**
+		 * @event
+		 */
+		CLAddon.INITIALIZE_COMPLETE = 'clAddonInitializeComplete';	
 		
 		proto.CLAddon = function(){
 			proto.superclass(this);
 		}
 		
+		/**
+		 * Returns a direct reference to parameters passed to the a5.cl.CreateApplication call.
+		 * @returns {Object}
+		 */
 		proto.getCreateParams = function(){
 			return a5.cl.instance()._cl_createParams();
 		}
 		
+		/**
+		 * Must be override as a starting point for the addon. This method is called after all addons have been loaded, but prior to plugins loading.
+		 * It is not necessary to call super on this method when overriding.
+		 */
 		proto.initializeAddOn = function(){
 			return false;
 		}
 		
+		/**
+		 * Defines a new config method for CLMain. This method should be called in the constructor of the addon. Values added dynamically create a method with a 'set' prefix, much like the existing setConfig method.
+		 * For example, a value of 'foo' would create a method named setFoo() in CLMain.
+		 * @param {String} type
+		 */
 		proto.createMainConfigMethod = function(type){
 			a5.cl.CLMain.prototype['set' + type.substr(0, 1).toUpperCase() + type.substr(1)] = function(){
 				a5.cl.CLMain._cl_storedCfgs[type] = Array.prototype.slice.call(arguments);
 			}
 		}
 		
+		/**
+		 * Gets the values set via CLMain for a type defined in createMainConfigMethod.
+		 * @param {Object} type
+		 */
 		proto.getMainConfigProps = function(type){
 			return a5.cl.CLMain._cl_storedCfgs[type];
 		}
 		
+		/**
+		 * 
+		 */
 		proto.registerAutoInstantiate = function(){
 			a5.cl.core.Instantiator.instance().registerAutoInstantiate.apply(null, arguments);
 		}
 		
+		/**
+		 * 
+		 */
 		proto.defineRegisterableProcess = function(process){
 			this.cl()._core().pluginManager().defineRegisterableProcess(process);
 		}
 	
 });
 
-
+/**
+ * The instance of an A5 CL application, acting as both a reference instance for core components via its methods and as a global binder object.
+ */
 a5.Package("a5.cl")
 
 	.Extends('CLBase')
 	.Mix('a5.cl.mixins.Binder')
 	.Class("CL", 'singleton', function(self, im){
-		/**#@+
-	 	 * @memberOf a5.cl.CL#
-	 	 * @function
-		 */
 	
 		var _params,
 			_config,
@@ -3496,7 +3576,11 @@ a5.Package("a5.cl")
 			core;
 		
 		this._cl_plugins = {};
-
+		
+		/**
+		 * 
+		 * @param {Object} params
+		 */
 		this.CL = function(params){
 			self.superclass(this);
 			_params = {};
@@ -3509,11 +3593,14 @@ a5.Package("a5.cl")
 			core.initializeCore((params.environment || null), (_params.clientEnvironment || null));
 		}
 		
+		/**
+		 * Returns the current launch state of the application, a value from TODO
+		 */
 		this.launchState = function(){ return core.launchState(); }
 		
 		/**
-		 *
-		 * @param {Boolean} [returnString]
+		 * Returns a reference to the application package.
+		 * @param {Boolean} [returnString=false] If true is passed, returns the string value of the namespace of the application package.
 		 */
 		this.applicationPackage = function(){ return core.instantiator().applicationPackage.apply(this, arguments); };
 		
@@ -3657,6 +3744,9 @@ a5.Package('a5.cl')
 	})
 	.Prototype('CLMain', 'abstract', function(proto, im, CLMain){
 		
+		/**
+		 * @param {Object} [params=null] An optional object of parameters to pass into the application instance. Must be passed as a parameter to a5.cl.CreateApplication.
+		 */
 		proto.CLMain = function(){
 			proto.superclass(this);
 			if(CLMain._extenderRef.length > 1)

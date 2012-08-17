@@ -6,16 +6,12 @@ a5.Package('com.testpilot111')
 		
 		cls.Main = function(app){
 			cls.superclass(this);
-
 			cls.setConfig({
 				dependencies:[
+					'js/CLUnitTest.js',
 					'js/Test.js'
 				]
 			})
-		}
-		
-		cls.Override.applicationLaunched = function(e){
-			//cls.render();
 		}
 })
 

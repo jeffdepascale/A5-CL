@@ -102,12 +102,12 @@ a5.Package('a5.cl')
 			cls.superclass(this);
 			
 		}
-		
-		cls.Override.before = function(rules, args, scope, method, callback){
-			args = Array.prototype.slice.call(args);
+
+		cls.Override.before = function(aspectArgs){		
 			var data = null,
+				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [];
 				argsCallback = null,
-				rules = rules.length ? rules[0] : {},
+				rules = aspectArgs.rules().length ? aspectArgs.rules()[0] : {},
 				propObj = null;
 			if (rules.takesData === true && args.length)
 				data = args.shift();
@@ -121,35 +121,35 @@ a5.Package('a5.cl')
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
 			var executeCall = function(){
-				if (rules.cacheResponse && getData(method)) {
+				if (rules.cacheResponse && getData(aspectArgs.method())) {
 					setTimeout(function(){
-						args.unshift(getData(method));
+						args.unshift(getData(aspectArgs.method()));
 						if (argsCallback) 
 							argsCallback(args);
-						callback(args);
+						aspectArgs.callback()(args);
 					}, 0);
 				} else {	
-					scope.call(method.getName(), data, function(response){
+					aspectArgs.scope().call(aspectArgs.method().getName(), data, function(response){
 						if (rules.cacheResponse)
-							storeData(method, response);
+							storeData(aspectArgs.method(), response);
 						args.unshift(response);
 						if (argsCallback) 
 							argsCallback(args);
-						callback(args);
+						aspectArgs.callback()(args);
 					}, propObj);
 				}
 			}
 			if (args[0] === AjaxCallAttribute.CANCEL_CYCLE) {
-				if (method._cl_cycleID) {
-					clearInterval(method._cl_cycleID);
-					delete method._cl_cycleID;
+				if (aspectArgs.method()._cl_cycleID) {
+					clearInterval(aspectArgs.method()._cl_cycleID);
+					delete aspectArgs.method()._cl_cycleID;
 				}
 				return a5.Attribute.ASYNC;
 			}
 			if (rules.cycle) {
-				if (!method._cl_cycleID) {
-					method._cl_cycleID = setInterval(function(){
-						method.apply(scope, args);
+				if (!aspectArgs.method()._cl_cycleID) {
+					aspectArgs.method()._cl_cycleID = setInterval(function(){
+						aspectArgs.method().apply(aspectArgs.scope(), args);
 					}, rules.cycle);
 					executeCall();
 				} else {
@@ -181,14 +181,12 @@ a5.Package('a5.cl')
 		cls.BoundAjaxReturnAttribute = function(){
 			cls.superclass(this);
 		}
-		
-		cls.Override.before = function(rules, args, scope, method, callback){
-			if (rules.length && rules[0].receiverMethod !== undefined) {
-				var method = rules[0].receiverMethod;
-				method.call(null, args[0]);
-			} else {
-				scope.notifyReceivers(args[0], method.getName());
-			}
+
+		cls.Override.before = function(aspectArgs){
+			if (aspectArgs.rules().length && aspectArgs.rules()[0].receiverMethod !== undefined) 
+				aspectArgs.rules()[0].receiverMethod.call(null, aspectArgs.args()[0]);
+			else
+				aspectArgs.scope().notifyReceivers(aspectArgs.args()[0], aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
 	})
