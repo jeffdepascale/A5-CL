@@ -27,6 +27,11 @@ a5.Package("a5.cl")
 			core = self.create(a5.cl.core.Core, [_params.applicationPackage]);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), _params);
 			_config = core.instantiator().createConfig(_config);
+			if(_config.breakOnDestroyedMethods == true){
+				a5._a5_destroyedObjFunc = function(){ 
+					debugger; 
+				}
+			}
 			core.initializeCore((params.environment || null), (_params.clientEnvironment || null));
 		}
 		

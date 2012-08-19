@@ -7,9 +7,10 @@ a5.Package('com.testpilot111')
 		cls.Main = function(app){
 			cls.superclass(this);
 			cls.setConfig({
+				//breakOnDestroyedMethods:true,
 				dependencies:[
 					'js/CLUnitTest.js',
-					'js/Test.js'
+					'js/tests/Test.js'
 				]
 			})
 		}

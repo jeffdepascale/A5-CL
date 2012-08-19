@@ -43,6 +43,9 @@ a5.SetNamespace("a5.cl.CLConfig", {
 	 */
 	applicationViewPath:'views/',
 	
+	
+	breakOnDestroyedMethods:false,
+	
 	/**
 	 * @type Boolean
 	 * @default false
