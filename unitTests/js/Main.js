@@ -10,7 +10,7 @@ a5.Package('com.testpilot111')
 				//breakOnDestroyedMethods:true,
 				dependencies:[
 					'js/CLUnitTest.js',
-					'js/tests/Test.js'
+					'js/tests/ServiceTest.js'
 				]
 			})
 		}

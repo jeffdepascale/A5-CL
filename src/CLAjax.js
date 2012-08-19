@@ -50,7 +50,7 @@ a5.Package('a5.cl')
 			if(this._cl_silent)
 				props.silent = true;
 			if(m){
-				if(m.charAt(0) !== '/')
+				if(this.url().indexOf('?') == -1 && m.charAt(0) !== '/')
 					m = '/' + m;
 			} else {
 				m = '';
@@ -87,7 +87,7 @@ a5.Package('a5.cl')
  */
 a5.Package('a5.cl')
 
-	.Extends('a5.Attribute')
+	.Extends('a5.AspectAttribute')
 	.Static(function(AjaxCallAttribute){
 		
 		AjaxCallAttribute.CANCEL_CYCLE	= 'ajaxCallAttributeCancelCycle';
