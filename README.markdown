@@ -1,4 +1,4 @@
-A5 CL (Core Layer) - Application Framework Library Built on A5(http://a5.testpilot111.com)
+A5 CL (Core Layer) - Application Framework Library Built on A5 (http://a5js.com)
 
 Licensed under GPL-3.0
 
