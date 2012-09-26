@@ -169,9 +169,8 @@ a5.Package('a5.cl.core')
 		}
 		
 		this.reqComplete = function(id){
-			var wasSilent = isSilent();
 			unqueueItem(id);
-			if ((reqArray.length === 0 || isSilent()) && !wasSilent) {
+			if (reqArray.length === 0 || checkSilentReq()) {
 				asyncRunning = false;
 				self.cl().dispatchEvent(im.CLEvent.ASYNC_COMPLETE);
 			}
@@ -188,6 +187,13 @@ a5.Package('a5.cl.core')
 				if (props && props.error) props.error.call(self, status, errorObj);
 				else this.throwError(errorObj);
 			}
+		}
+		
+		var checkSilentReq = function(){
+			for(var i =0, l = reqArray.length; i<l; i++)
+				if(reqArray[i].props.silent !== true)
+					return false;
+			return true;
 		}
 		
 		var getPropsForID = function(id){
