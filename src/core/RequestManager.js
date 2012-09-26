@@ -31,38 +31,43 @@ a5.Package('a5.cl.core')
 			var req;
 			try {	
 				var reqComplete = function($req){
-					var req = this;
-					if (req.readyState == 4) {
-						var response,
-						retData,
-						status = req.status;
-						if (status !== 500) {
-							if (props.isJson) {
-								response = req.responseText;
-								
-								if (a5.cl.core.Utils.trim(response) !== "") {
-									try {
-										response = a5.cl.core.JSON.parse(response);
-										retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
-									} catch (e) {
-										status = 500;
-										retData = "Error parsing JSON response from url: " + props.url + "\nresponse: " + response;
+					if (getPropsForID(reqID)) {
+						var req = this;
+						if (req.readyState == 4) {
+							var response, retData, status = req.status;
+							if (status !== 500) {
+								if (props.isJson) {
+									response = req.responseText;
+									
+									if (a5.cl.core.Utils.trim(response) !== "") {
+										try {
+											response = a5.cl.core.JSON.parse(response);
+											retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
+										} 
+										catch (e) {
+											status = 500;
+											retData = "Error parsing JSON response from url: " + props.url + "\nresponse: " + response;
+										}
 									}
 								}
-							} else if (props.isXML && req.responseXML) {
-								response = req.responseXML;
-							} else {
-								response = req.responseText;
+								else 
+									if (props.isXML && req.responseXML) {
+										response = req.responseXML;
+									}
+									else {
+										response = req.responseText;
+									}
+								if (retData === undefined) 
+									retData = response;
 							}
-							if (retData === undefined) 
-								retData = response;
+							if (status == 200 || (status == 0)) {
+								self.success(reqID, retData);
+							}
+							else {
+								self.onError(reqID, status, retData || req.responseText);
+							}
+							self.reqComplete(reqID);
 						}
-						if (status == 200 || (status == 0)) {
-							self.success(reqID, retData);
-						} else {
-							self.onError(reqID, status, retData || req.responseText);
-						}
-						self.reqComplete(reqID);
 					}
 				},
 				

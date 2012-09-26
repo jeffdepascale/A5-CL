@@ -1,7 +1,6 @@
 src/main.js
 src/CLBase.js
 src/CLError.js
-src/CLWorker.js
 src/CLEvent.js
 src/interfaces/IHTMLTemplate.js
 src/interfaces/ILogger.js
