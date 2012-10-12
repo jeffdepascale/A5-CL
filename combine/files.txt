@@ -6,6 +6,7 @@ src/CLEvent.js
 src/interfaces/IHTMLTemplate.js
 src/interfaces/ILogger.js
 src/interfaces/IServiceURLRewriter.js
+src/interfaces/ILaunchInterceptor.js
 src/interfaces/IDataStorage.js
 src/interfaces/IBindableReceiver.js
 src/core/PluginManager.js
