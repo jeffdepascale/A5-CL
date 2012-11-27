@@ -9,22 +9,18 @@ a5.Package('a5.cl.core')
 		_requestManager,
 		_envManager,
 		_globalUpdateTimer,
-		_resourceCache,
 		_instantiator,
 		_pluginManager,
-		_launchState,
-		_manifestManager;
+		_launchState;
 		
 		this.Core = function($applicationPackage){
 			self.superclass(this); 
 			_instantiator = self.create(a5.cl.core.Instantiator, [$applicationPackage]);
 		}
 			
-		this.resourceCache = function(){ return _resourceCache; }	
 		this.instantiator = function(){ return _instantiator; }			
 		this.cache = function(){	return _cache;	}
 		this.envManager = function(){ return _envManager; }	
-		this.manifestManager = function(){ return _manifestManager; }
 		this.requestManager = function(){ return _requestManager;	}	
 		this.pluginManager = function(){ return _pluginManager; }			
 		this.globalUpdateTimer = function(){return _globalUpdateTimer;}
@@ -38,17 +34,21 @@ a5.Package('a5.cl.core')
 		this.initializeCore = function($environment, $clientEnvironment){
 			updateLaunchStatus('APPLICATION_INITIALIZING');
 			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer);
-			_manifestManager = self.create(a5.cl.core.ManifestManager);
 			_requestManager = self.create(a5.cl.core.RequestManager);
 			_envManager = self.create(a5.cl.core.EnvManager, [$environment, $clientEnvironment]);
-			_resourceCache = self.create(a5.cl.core.ResourceCache);
 			_pluginManager = self.create(a5.cl.core.PluginManager);
 			_cache = self.create(a5.cl.core.DataCache);
-			_resourceCache.initStorageRules();
 			var loadPaths = self.config().dependencies;
-			if(loadPaths.length) _resourceCache.include(loadPaths, dependenciesLoaded, function(e){
-				updateLaunchStatus('DEPENDENCIES_LOADING', e);
-			});
+			if(loadPaths.length){
+				if(self.cl().initializer()){
+					var implemented = self.cl().initializer().load(loadPaths, dependenciesLoaded, function(e){
+						updateLaunchStatus('DEPENDENCIES_LOADING', e);
+					});
+					if(implemented == false)
+						dependenciesLoaded();
+				} else
+					dependenciesLoaded();
+			}
 			else dependenciesLoaded();	
 		}
 		

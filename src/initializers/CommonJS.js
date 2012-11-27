@@ -1,4 +1,4 @@
-﻿a5.Package('a5.cl.intializers')
+﻿a5.Package('a5.cl.initializers')
 
     .Extends('a5.cl.CLInitializer')
     .Class('CommonJSInitializer', function (cls, im) {
@@ -7,9 +7,10 @@
             cls.superclass(this);
             a5.RegisterNamespaceResolver(requireHandler);
             a5.RegisterClassCreateHandler(exportHandler);
+			require('xmlhttprequest');
         }
 
-        cls.Override.intialize = function (callback) {
+        cls.Override.initialize = function (callback) {
             callback();
         }
 

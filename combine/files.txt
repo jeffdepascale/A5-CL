@@ -1,6 +1,7 @@
 lib/A5.js
 src/main.js
 src/CLBase.js
+src/CLInitializer.js
 src/CLError.js
 src/CLEvent.js
 src/interfaces/IHTMLTemplate.js
@@ -15,10 +16,8 @@ src/core/Instantiator.js
 src/CLConfig.js
 src/core/Utils.js
 src/core/RequestManager.js
-src/core/ManifestManager.js
 src/core/JSON.js
 src/core/DataCache.js
-src/core/ResourceCache.js
 src/core/GlobalUpdateTimer.js
 src/core/Core.js
 src/mixins/DataStore.js
@@ -31,3 +30,4 @@ src/CLPlugin.js
 src/CLAddon.js
 src/CL.js
 src/CLMain.js
+src/initializers/DOM.js

@@ -9,6 +9,7 @@ a5.Package("a5.cl")
 	
 		var _params,
 			_config,
+			_initializer,
 			_main,
 			core;
 		
@@ -18,12 +19,13 @@ a5.Package("a5.cl")
 		 * 
 		 * @param {Object} params
 		 */
-		this.CL = function(params){
+		this.CL = function(params, initializer){
 			self.superclass(this);
 			_params = {};
 			if(a5.cl.CLMain._extenderRef.length)
 				_main = self.create(a5.cl.CLMain._extenderRef[0], [params]);
 			_params.applicationPackage = _main.classPackage();
+			_initializer = initializer;
 			core = self.create(a5.cl.core.Core, [_params.applicationPackage]);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), _params);
 			_config = core.instantiator().createConfig(_config);
@@ -32,7 +34,14 @@ a5.Package("a5.cl")
 					debugger; 
 				}
 			}
-			core.initializeCore((params.environment || null), (_params.clientEnvironment || null));
+		}
+		
+		this._cl_launch = function(){
+			core.initializeCore((_params.environment || null), (_params.clientEnvironment || null));
+		}
+		
+		this.initializer = function(){
+			return _initializer;
 		}
 		
 		/**
@@ -102,18 +111,6 @@ a5.Package("a5.cl")
 		 */
 		this.environment = function(){	return core.envManager().environment();	}
 		
-		
-		/**
-		 * Includes external content into the application.
-		 *
-		 * @param {String} value
-		 * @param {function} callback
-		 * @param {function} [itemCallback]
-		 * @param {Boolean} [allowReplacements=true]
-		 * @param {function} [onError]
-		 */
-		this.include = function(){ return core.resourceCache().include.apply(this, arguments); }	
-		
 		/**
 		 * Returns whether the client environment supports manifest caching.
 		 *
@@ -135,24 +132,7 @@ a5.Package("a5.cl")
 		/**
 		 *
 		 */
-		this.manifestBuild = function(){ return core.manifestManager().manifestBuild();	}
-		
-		/**
-		 *
-		 */
 		this.Override.plugins = function(){ return this._cl_plugins; }
-		
-		/**
-		 * @param {Boolean} [restartOnComplete] Restarts the application after purging the cache.
-		 */
-		this.purgeAllCaches = function(restartOnComplete){ core.resourceCache().purgeAllCaches(restartOnComplete); }
-		
-		/**
-		 * Purges the manifest cache data in applicationStorage, if applicable.
-		 *
-		 * @param {Boolean} [restartOnComplete] Restarts the application after purging the cache.
-		 */
-		this.purgeApplicationCache = function(restartOnComplete){ core.manifestManager().purgeApplicationCache(restartOnComplete); }
 		
 		/**
 		 * Restarts the application.

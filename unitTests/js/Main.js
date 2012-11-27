@@ -9,8 +9,8 @@ a5.Package('com.testpilot111')
 			cls.setConfig({
 				//breakOnDestroyedMethods:true,
 				dependencies:[
-					'js/CLUnitTest.js',
-					'js/tests/ServiceTest.js'
+					'js/CLUnitTest.js'
+					//'js/tests/ServiceTest.js'
 				]
 			})
 		}
