@@ -7,7 +7,6 @@ a5.Package('a5.cl.core')
 	
 		var _cache,
 		_requestManager,
-		_envManager,
 		_globalUpdateTimer,
 		_instantiator,
 		_pluginManager,
@@ -20,7 +19,6 @@ a5.Package('a5.cl.core')
 			
 		this.instantiator = function(){ return _instantiator; }			
 		this.cache = function(){	return _cache;	}
-		this.envManager = function(){ return _envManager; }	
 		this.requestManager = function(){ return _requestManager;	}	
 		this.pluginManager = function(){ return _pluginManager; }			
 		this.globalUpdateTimer = function(){return _globalUpdateTimer;}
@@ -35,7 +33,6 @@ a5.Package('a5.cl.core')
 			updateLaunchStatus('APPLICATION_INITIALIZING');
 			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer);
 			_requestManager = self.create(a5.cl.core.RequestManager);
-			_envManager = self.create(a5.cl.core.EnvManager, [$environment, $clientEnvironment]);
 			_pluginManager = self.create(a5.cl.core.PluginManager);
 			_cache = self.create(a5.cl.core.DataCache);
 			var loadPaths = self.config().dependencies;
@@ -57,7 +54,6 @@ a5.Package('a5.cl.core')
 			_pluginManager.instantiatePlugins();
 			updateLaunchStatus('PLUGINS_LOADED');
 			updateLaunchStatus('APPLICATION_PREPARED')
-			_envManager.initialize();
 			_instantiator.beginInstantiation();
 			var plgn = _pluginManager.getRegisteredProcess('launchInterceptor');
 			if(plgn){

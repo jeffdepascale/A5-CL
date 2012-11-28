@@ -1,5 +1,5 @@
 
-a5.Package('a5.cl.core')
+a5.Package('a5.cl.initializers.dom')
 
 	.Import('a5.cl.CLEvent')
 	.Extends('a5.cl.CLBase')

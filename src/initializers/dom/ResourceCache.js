@@ -1,120 +1,4 @@
-﻿
-(function(){
-	
-a5.Package('a5.cl.initializers.DOM')
-
-    .Extends('a5.cl.CLInitializer')
-    .Class('DOMInitializer', function (cls, im) {
-
-		var resourceCache;
-
-        cls.DOMInitializer = function () {
-            cls.superclass(this);
-			resourceCache = cls.create(im.ResourceCache);
-        }		
-				
-		cls.ResourceCache = function(){
-			return resourceCache;
-		}
-		
-		cls.Override.load = function(arr, complete, progress){
-			return resourceCache.load(arr, complete, progress);
-		}
-
-        cls.Override.initialize = function (callback) {
-            var initialized = false,
-
-            onDomReady = function () {
-                if (!initialized) {
-                    initialized = true;
-                    callback();
-                }
-            },
-
-            domContentLoaded = function () {
-                if (document.addEventListener) {
-                    document.removeEventListener("DOMContentLoaded", domContentLoaded, false);
-                    onDomReady();
-                } else if (document.attachEvent) {
-                    if (document.readyState === "complete") {
-                        document.detachEvent("onreadystatechange", domContentLoaded);
-                        onDomReady();
-                    }
-                }
-            }
-
-            if (document.readyState === "complete") {
-                onDomReady();
-            } else if (document.addEventListener) {
-                document.addEventListener("DOMContentLoaded", domContentLoaded, false);
-            } else if (document.attachEvent) {
-                document.attachEvent("onreadystatechange", domContentLoaded);
-            }
-        }
-});
-
-a5.Package('a5.cl.initializers.DOM')
-
-	.Extends('a5.cl.CLBase')
-	.Class('ManifestManager', 'singleton final', function(self){
-	
-		var _isOfflineCapable,
-		appCache,
-		_manifestBuild = null,
-		manifestHref;
-		
-		this.ManifestManager = function(){
-			self.superclass(this);
-			manifestHref = document.getElementsByTagName('html')[0].getAttribute('manifest');
-			appCache = window.applicationCache;
-			_isOfflineCapable = appCache && manifestHref ? true:false;
-			if(_isOfflineCapable) 
-				initialize();
-		}
-		
-		this.manifestBuild = function(){	return _manifestBuild; }
-		this.isOfflineCapable = function(){	return _isOfflineCapable;}
-		
-		this.purgeApplicationCache = function($restartOnComplete){
-			var restartOnComplete = ($restartOnComplete == false ? false:true);
-			var updateReady = function(){
-				appCache.swapCache();
-				if(restartOnComplete) 
-					self.cl().relaunch(true);
-			}
-			if (appCache.status == 1) {
-				appCache.addEventListener('updateready', updateReady, false);
-				appCache.update();
-			} else {
-				throw 'Cannot purge application cache, appCache status is ' + appCache.status;
-			}
-		}
-		
-		var initialize = function(){
-			checkManifestBuild(manifestHref);
-			appCache.addEventListener('error', onerror, false);
-		}
-		
-		var checkManifestBuild = function(manifestHref){
-			var resourceCache = a5.cl.core.ResourceCache.instance(), 
-			result;
-			self.cl().include(manifestHref, function(data){
-				result = data.match(/#build\b.[0-9]*/);
-				if(result){
-					result = result[0];
-					result = result.split('#build')[1];
-					result = parseInt(a5.cl.core.Utils.trim(result));
-					if(!isNaN(result)) _manifestBuild = result;
-				}
-			})
-		}
-		
-		var onerror = function(e){
-			self.redirect(500, 'Error loading manifest');
-		}
-})
-
-a5.Package('a5.cl.initializers.DOM')
+a5.Package('a5.cl.initializers.dom')
 	.Extends('a5.cl.CLBase')
 	.Mix('a5.cl.mixins.DataStore')
 	.Static(function(ResourceCache){
@@ -245,7 +129,7 @@ a5.Package('a5.cl.initializers.DOM')
 				var cacheValue = checkCache(url);
 				if (!cacheValue) {
 					if (type) {
-						url = a5.cl.core.Utils.makeAbsolutePath(checkReplacements(url));
+						url = im.Utils.makeAbsolutePath(checkReplacements(url));
 						if(cacheBreakValue)
 							url = url + '?a5=' + cacheBreakValue;
 						if (type === 'css') {
@@ -470,31 +354,8 @@ a5.Package('a5.cl.initializers.DOM')
 		}
 		
 		var checkReplacements = function(url){
-			return url.replace('{CLIENT_ENVIRONMENT}', a5.cl.instance().clientEnvironment()).replace('{ENVIRONMENT}', a5.cl.instance().environment());
+			var env = self.cl().initializer().environmentManager();
+			return url.replace('{CLIENT_ENVIRONMENT}', env.clientEnvironment()).replace('{ENVIRONMENT}', env.environment());
 		}
 	
 })
-
-a5.Package('a5.cl.initializers.DOM')
-
-	.Extends('a5.cl.CLAddon')
-	.Class('DOM', 'singleton', function(cls, im, DOM){
-		
-		var manifestManager;
-		
-		cls.DOM = function(){
-			cls.superclass(this);
-		}
-		
-		cls.Override.initializePlugin = function(){
-			manifestManager = cls.create(im.ManifestManager);
-		}
-		
-		cls.ManifestManager = function(){
-			return manifestManager;
-		}
-		
-});
-
-a5.Create(a5.cl.initializers.DOM.DOMInitializer);
-})(this);

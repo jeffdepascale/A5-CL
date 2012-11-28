@@ -11,7 +11,7 @@ a5.Package('a5.cl.core')
 				htmlTemplate:null,
 				serviceURLRewriter:null,
 				logger:null,
-				dataStorage:null,
+				dataCacheProvider:null,
 				launchInterceptor:null,
 				presentationLayer:null
 			}

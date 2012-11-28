@@ -1,6 +1,11 @@
 
 a5.Package("a5.cl.core")
 	.Static(function(DataCache){
+		
+		DataCache.enabled = function(){
+			return DataCache.instance().enabled();
+		}
+		
 		DataCache.cacheExists = function(){
 			return DataCache.instance().cacheExists();
 		}
@@ -37,100 +42,47 @@ a5.Package("a5.cl.core")
 	.Class("DataCache", 'singleton final', function(self, im){
 		
 		var _enabled,
-			_capable,
-			_hadCacheAtLaunch,
-			cacheKeys;
+			cacheKeys,
+			provider;
 		
 		this.DataCache = function(){
 			self.superclass(this); 
 			_enabled = a5.cl.instance().config().cacheEnabled;
-			_capable = window.localStorage != undefined;
-			_hadCacheAtLaunch = (this.isAvailable() && localStorage.length) ? true:false;
 			cacheKeys = [];
 		}
 		
+		this.enabled = function(){
+			return _enabled;
+		}
+
 		this.isAvailable = function(){
-			var plugin = getDataPlugin();
-			if(plugin)
-				_capable = plugin.isCapable.call(plugin);
-			return _enabled && _capable;
+			getCacheProvider().isAvailable();
 		}
 		
 		this.cacheExists = function(){
-			if(this.isAvailable()) return _hadCacheAtLaunch;
-			else return false;
+			return getCacheProvider().cacheExists();
 		}
 		
 		this.storeValue = function(key, value){
-			var plugin = getDataPlugin();
-			if(plugin)
-				return plugin.storeValue.apply(plugin, arguments);
-			
-			if (self.isAvailable() && checkCacheKey(key)) {
-				var stringVal = a5.cl.core.JSON.stringify(value),
-				value = localStorage.setItem(key, stringVal);
-				return value;
-			} else {
+			if (self.isAvailable() && checkCacheKey(key))
+				return getCacheProvider().storeValue(key);
+			else
 				return false;
-			}
 		}
 		
-		this.getValue = function(key){
-			var plugin = getDataPlugin();
-			if(plugin)
-				return plugin.getValue.apply(plugin, arguments);
-			
-			if (self.isAvailable() && checkCacheKey(key)) {
-				try {
-					var retValue = localStorage.getItem(key);
-					return a5.cl.core.JSON.parse(retValue);
-				} catch (e) {
-					return null;
-				}
-			} else {
-				return null;
-			}
+		this.getValue = function(key){			
+			if (self.isAvailable() && checkCacheKey(key)) 
+				return getCacheProvider().getValue(key);
 		}
 		
 		this.clearValue = function(key){
-			var plugin = getDataPlugin();
-			if(plugin)
-				return plugin.clearValue.apply(plugin, arguments);
-			
-			if (self.isAvailable() && checkCacheKey(key)) {
-				try {
-					return localStorage.removeItem(key);
-				} 
-				catch (e) {
-					return false;
-				}
-			} else {
-				return false;
-			}
+			if (self.isAvailable() && checkCacheKey(key))
+				return getCacheProvider().clearValue(key);
 		}
 		
-		this.clearScopeValues = function(scope, $exceptions){
-			var plugin = getDataPlugin();
-			if(plugin)
-				return plugin.clearScopeValues.apply(plugin, arguments);
-			
-			var exceptions = $exceptions || [], i, j;
-			for(var i = 0, l=localStorage.length; i<l; i++){
-				var key =localStorage.key(i);
-				if (key.indexOf(scope) == 0) {
-					var cacheItemName = key.split(scope)[1].substr(1),
-					isExcepted = false;
-					for (j = 0, m=exceptions.length; j < m; j++) {
-						if(cacheItemName == exceptions[j]) isExcepted = true;
-					}
-					if(!isExcepted){
-						localStorage.removeItem(key);
-						i--;
-						l=localStorage.length;
-					}
-				}
-			}
-		}
+		this.clearScopeValues = function(scope, $exceptions){		
+			return getCacheProvider().clearScopeValues(scope, $exceptions);
+		}		
 		
 		this.validateCacheKeyPrefix = function(key){
 			for (var i=0, l=cacheKeys.length; i<l; i++)
@@ -160,8 +112,10 @@ a5.Package("a5.cl.core")
 			return isInCache;
 		}
 		
-		var getDataPlugin = function(){
-			return self.plugins().getRegisteredProcess('dataStorage');
+		var getCacheProvider = function(){
+			if (!provider) 
+				provider = self.plugins().getRegisteredProcess('dataCacheProvider');
+			return provider;
 		}
 	
 	

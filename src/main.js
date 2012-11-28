@@ -39,6 +39,8 @@ a5.SetNamespace('a5.cl', true, function(){
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
                     createCallbacks = null;
+					if(initializer !== null)
+						initializer.applicationInitialized(inst);
 					inst._cl_launch();
                  }
 
