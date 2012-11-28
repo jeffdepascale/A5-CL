@@ -14,6 +14,10 @@ a5.Package('com.testpilot111')
 				]
 			})
 		}
+		
+		cls.Override.applicationLaunched = function(){
+			console.log('launched');
+		}
 })
 
 a5.cl.CreateApplication();	

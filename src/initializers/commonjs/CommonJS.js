@@ -7,7 +7,11 @@
             cls.superclass(this);
             a5.RegisterNamespaceResolver(requireHandler);
             a5.RegisterClassCreateHandler(exportHandler);
-			//require('xmlhttprequest');
+			try {
+				require('xmlhttprequest');
+			} catch(e){
+				throw "A5 for CommonJS requires xmlhttprequest module";
+			}
         }
 		
 		cls.Override.load = function(arr, complete, progress){
@@ -27,7 +31,6 @@
         }
 
         var requireHandler = function (namespace) {
-			console.log(namespace);
             return require(namespace);
         }
 });
