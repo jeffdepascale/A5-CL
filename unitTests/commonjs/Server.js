@@ -1,4 +1,3 @@
-
 a5.Package('com.testpilot111')
 	.Import('http')
 	.Extends('a5.cl.CLBase')

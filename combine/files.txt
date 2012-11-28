@@ -1,4 +1,3 @@
-lib/A5.js
 src/main.js
 src/CLBase.js
 src/CLInitializer.js
@@ -8,10 +7,9 @@ src/interfaces/IHTMLTemplate.js
 src/interfaces/ILogger.js
 src/interfaces/IServiceURLRewriter.js
 src/interfaces/ILaunchInterceptor.js
-src/interfaces/IDataStorage.js
+src/interfaces/IDataCacheProvider.js
 src/interfaces/IBindableReceiver.js
 src/core/PluginManager.js
-src/core/EnvManager.js
 src/core/Instantiator.js
 src/CLConfig.js
 src/core/Utils.js
@@ -30,4 +28,3 @@ src/CLPlugin.js
 src/CLAddon.js
 src/CL.js
 src/CLMain.js
-src/initializers/DOM.js

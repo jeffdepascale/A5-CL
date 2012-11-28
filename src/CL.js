@@ -31,7 +31,7 @@ a5.Package("a5.cl")
 			_config = core.instantiator().createConfig(_config);
 			if(_config.breakOnDestroyedMethods == true){
 				a5._a5_destroyedObjFunc = function(){ 
-					debugger; 
+					//debugger; 
 				}
 			}
 		}

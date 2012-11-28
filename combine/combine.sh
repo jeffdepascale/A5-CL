@@ -11,6 +11,8 @@ echo "" >> ./bin/index.html
 echo -e "\t\t<!-- A5-CL -->" >> ./bin/index.html
 
 echo "" > ./bin/combine.temp.js
+cat ./lib/A5.js >> ./bin/combine.temp.js
+echo "" >> ./bin/combine.temp.js
 cat ./combine/closures/open.txt >> ./bin/combine.temp.js
 while read line
 do
