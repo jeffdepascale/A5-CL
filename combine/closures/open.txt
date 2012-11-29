@@ -1,1 +1,3 @@
-(function( window, undefined ) {
+(function(global) {
+
+var a5 = global.a5;

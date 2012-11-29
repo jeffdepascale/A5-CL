@@ -23,10 +23,32 @@ done < ./combine/files.txt
 cat ./combine/closures/close.txt >> ./bin/combine.temp.js
 
 java -jar ./combine/yuicompressor-2.4.2.jar ./bin/combine.temp.js -o ./bin/combine-min.temp.js --charset utf-8
-cat ./combine/copyrights.txt ./bin/combine.temp.js > ./bin/A5-CL.js
-cat ./combine/copyrights.txt ./bin/combine-min.temp.js > ./bin/A5-CL-min.js
+cat ./bin/combine.temp.js > ./bin/A5-CL.js
+cat ./bin/combine-min.temp.js > ./bin/A5-CL-min.js
 rm ./bin/combine.temp.js
 rm ./bin/combine-min.temp.js
 gzip -c ./bin/A5-CL-min.js > ./bin/A5-CL-min.js.gz
 : -------------------- index close--------------------
 echo -e '\t<body>\n\t</body>\n</html>' >> ./bin/index.html
+
+: -------------------- dom ---------------------------
+
+echo "" > ./bin/A5-CL-DOM.js
+cat ./bin/A5-CL.js >> ./bin/A5-CL-DOM.js
+echo -e "\n" >> ./bin/A5-CL-DOM.js
+while read line
+do
+	cat $line >> ./bin/A5-CL-DOM.js
+	echo -e "\n" >> ./bin/A5-CL-DOM.js
+done < ./combine/domfiles.txt
+
+java -jar ./combine/yuicompressor-2.4.2.jar ./bin/A5-CL-DOM.js -o ./bin/A5-CL-DOM-min.js --charset utf-8
+
+gzip -c ./bin/A5-CL-DOM-min.js > ./bin/A5-CL-DOM-min.js.gz
+
+: -------------------- node ---------------------------
+
+echo "" > ./npm/lib/A5-CL-Node.js
+cat ./bin/A5-CL.js >> ./npm/lib/A5-CL-Node.js
+echo -e "\n" >> ./npm/lib/A5-CL-Node.js
+cat ./src/initializers/nodejs/NodeJSInitializer.js >> ./npm/lib/A5-CL-Node.js

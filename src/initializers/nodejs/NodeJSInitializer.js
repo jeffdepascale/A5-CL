@@ -1,22 +1,19 @@
-﻿a5.Package('a5.cl.initializers.commonjs')
+
+var a5 = this.a5;
+
+a5.Package('a5.cl.initializers.nodejs')
 
     .Extends('a5.cl.CLInitializer')
-    .Class('CommonJSInitializer', function (cls, im) {
+    .Class('NodeJSInitializer', function (cls, im) {
 		
 		var root,
 			path;
 		
-        cls.CommonJSInitializer = function () {
+        cls.NodeJSInitializer = function () {
             cls.superclass(this);
 			GLOBAL.a5 = a5;
-			try {
-				path = require('path');
-			} catch(e){
-				throw "A5 for CommonJS requires 'path' module";
-			}
-			root = path.dirname(process.mainModule.filename);
+			root = process.mainModule.filename.substr(0, process.mainModule.filename.lastIndexOf('/') +1);
             a5.RegisterNamespaceResolver(requireHandler);
-            a5.RegisterClassCreateHandler(exportHandler);
 			try {
 				require('xmlhttprequest');
 			} catch(e){
@@ -34,16 +31,10 @@
         cls.Override.initialize = function (callback) {
             callback();
         }
-
-        var exportHandler = function (cls) {
-            for (var prop in cls)
-                if(prop.indexOf("_" != 0))
-                    exports[prop] = cls[prop];
-        }
-
+		
         var requireHandler = function (namespace) {
             return require(namespace);
         }
 });
 
-a5.Create(a5.cl.initializers.commonjs.CommonJSInitializer);
+a5.Create(a5.cl.initializers.nodejs.NodeJSInitializer);

@@ -1,5 +1,7 @@
 
-(function(global){
+
+//A5, Copyright (c) 2012, Jeff dePascale http://www.a5js.com
+(function(global) {
 	
     var globalItemList = null,
         namespaceResolver = null,
@@ -156,6 +158,7 @@
 		    namespaceResolver = resolver;
 		}
 	}
+
 
 a5.SetNamespace('a5.core.reflection', true, function(){
 	
@@ -426,7 +429,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	
 	var packageQueue = [],
 		delayProtoCreation = false,
-        classCreateHandler = null,
 		queuedPrototypes = [],
 		queuedImplementValidations = [],
 		prop,
@@ -453,7 +455,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		//else
 			//TODO: throw error, invalid class declaration
 		retObj._a5_initialize(args);
-		//TODO: class initializer
 		return retObj;
 	},
 	
@@ -980,10 +981,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	    for(i = 0, l = queuedImplementValidations.length; i<l; i++)
 	        a5.core.verifiers.validateImplementation(queuedImplementValidations[i].pkgObj, queuedImplementValidations[i].obj); 
 	    queuedImplementValidations = [];
-	}
-	
-	a5.RegisterClassCreateHandler = function (hndlr) {
-	    classCreateHandler = hndlr;
 	}
 })
 
@@ -2491,11 +2488,13 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	//600: Contract
 	601:'Invalid implementation of Contract on interace {intNM} in class {implNM} for method {method}.'
 })
+
+
+
 })(this);
 (function(global) {
-	
-var a5 = global.a5;
 
+var a5 = global.a5;
 a5.SetNamespace('a5.cl', true, function(){
 
     var initializer = null,
@@ -5307,24 +5306,31 @@ a5.Package('a5.cl')
 		proto.applicationWillRelaunch = function(){}
 })	
 
-a5.Package('a5.cl.initializers.commonjs')
+
+
+})(this);
+
+
+var a5 = this.a5;
+
+a5.Package('a5.cl.initializers.nodejs')
 
     .Extends('a5.cl.CLInitializer')
-    .Class('CommonJSInitializer', function (cls, im) {
+    .Class('NodeJSInitializer', function (cls, im) {
 		
-		var root;
+		var root,
+			path;
 		
-        cls.CommonJSInitializer = function () {
+        cls.NodeJSInitializer = function () {
             cls.superclass(this);
 			GLOBAL.a5 = a5;
-			root = require('path').dirname(process.mainModule.filename);
+			root = process.mainModule.filename.substr(0, process.mainModule.filename.lastIndexOf('/') +1);
             a5.RegisterNamespaceResolver(requireHandler);
-            a5.RegisterClassCreateHandler(exportHandler);
-			//try {
+			try {
 				require('xmlhttprequest');
-			//} catch(e){
-				//throw "A5 for CommonJS requires xmlhttprequest module";
-			//}
+			} catch(e){
+				throw "A5 for CommonJS requires 'xmlhttprequest' module";
+			}
         }
 		
 		cls.Override.load = function(arr, complete, progress){
@@ -5337,21 +5343,10 @@ a5.Package('a5.cl.initializers.commonjs')
         cls.Override.initialize = function (callback) {
             callback();
         }
-
-        var exportHandler = function (cls) {
-            for (var prop in cls)
-                if(prop.indexOf("_" != 0))
-                    exports[prop] = cls[prop];
-        }
-
+		
         var requireHandler = function (namespace) {
             return require(namespace);
         }
 });
 
-a5.Create(a5.cl.initializers.commonjs.CommonJSInitializer);
-
-
-
-})(this);
-
+a5.Create(a5.cl.initializers.nodejs.NodeJSInitializer);

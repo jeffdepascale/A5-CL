@@ -1,5 +1,7 @@
 
-(function(global){
+
+//A5, Copyright (c) 2012, Jeff dePascale http://www.a5js.com
+(function(global) {
 	
     var globalItemList = null,
         namespaceResolver = null,
@@ -156,6 +158,7 @@
 		    namespaceResolver = resolver;
 		}
 	}
+
 
 a5.SetNamespace('a5.core.reflection', true, function(){
 	
@@ -426,7 +429,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	
 	var packageQueue = [],
 		delayProtoCreation = false,
-        classCreateHandler = null,
 		queuedPrototypes = [],
 		queuedImplementValidations = [],
 		prop,
@@ -453,7 +455,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		//else
 			//TODO: throw error, invalid class declaration
 		retObj._a5_initialize(args);
-		//TODO: class initializer
 		return retObj;
 	},
 	
@@ -980,10 +981,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	    for(i = 0, l = queuedImplementValidations.length; i<l; i++)
 	        a5.core.verifiers.validateImplementation(queuedImplementValidations[i].pkgObj, queuedImplementValidations[i].obj); 
 	    queuedImplementValidations = [];
-	}
-	
-	a5.RegisterClassCreateHandler = function (hndlr) {
-	    classCreateHandler = hndlr;
 	}
 })
 
@@ -2491,11 +2488,13 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 	//600: Contract
 	601:'Invalid implementation of Contract on interace {intNM} in class {implNM} for method {method}.'
 })
+
+
+
 })(this);
 (function(global) {
-	
-var a5 = global.a5;
 
+var a5 = global.a5;
 a5.SetNamespace('a5.cl', true, function(){
 
     var initializer = null,
@@ -5307,51 +5306,1011 @@ a5.Package('a5.cl')
 		proto.applicationWillRelaunch = function(){}
 })	
 
-a5.Package('a5.cl.initializers.commonjs')
-
-    .Extends('a5.cl.CLInitializer')
-    .Class('CommonJSInitializer', function (cls, im) {
-		
-		var root;
-		
-        cls.CommonJSInitializer = function () {
-            cls.superclass(this);
-			GLOBAL.a5 = a5;
-			root = require('path').dirname(process.mainModule.filename);
-            a5.RegisterNamespaceResolver(requireHandler);
-            a5.RegisterClassCreateHandler(exportHandler);
-			//try {
-				require('xmlhttprequest');
-			//} catch(e){
-				//throw "A5 for CommonJS requires xmlhttprequest module";
-			//}
-        }
-		
-		cls.Override.load = function(arr, complete, progress){
-			for (var i = 0, l = arr.length; i < l; i++) {
-				require(root + "/" + arr[i]);
-			}
-			complete();
-		}
-
-        cls.Override.initialize = function (callback) {
-            callback();
-        }
-
-        var exportHandler = function (cls) {
-            for (var prop in cls)
-                if(prop.indexOf("_" != 0))
-                    exports[prop] = cls[prop];
-        }
-
-        var requireHandler = function (namespace) {
-            return require(namespace);
-        }
-});
-
-a5.Create(a5.cl.initializers.commonjs.CommonJSInitializer);
-
 
 
 })(this);
+
+
+a5.Package("a5.cl.initializers.dom")
+	.Extends("a5.cl.CLPlugin")
+	.Implements('a5.cl.interfaces.IDataCacheProvider')
+	.Class("DataCache", 'singleton final', function(cls, im){
+		
+		var _capable,
+			_hadCacheAtLaunch;
+		
+		this.DataCache = function(){
+			cls.superclass(this); 
+			cls.registerForProcess('dataCacheProvider');
+			_capable = window.localStorage != undefined;
+			_hadCacheAtLaunch = (cls.isAvailable() && localStorage.length) ? true:false;
+		}
+		
+		this.isAvailable = function(){
+			return a5.cl.core.DataCache.enabled() && _capable;
+		}
+		
+		this.cacheExists = function(){
+			if(this.isAvailable()) return _hadCacheAtLaunch;
+			else return false;
+		}
+		
+		this.storeValue = function(key, value){
+			var stringVal = a5.cl.core.JSON.stringify(value);
+			return localStorage.setItem(key, stringVal);
+		}
+		
+		this.getValue = function(key){
+			try {
+				var retValue = localStorage.getItem(key);
+				return a5.cl.core.JSON.parse(retValue);
+			} catch (e) {
+				return null;
+			}
+		}
+		
+		this.clearValue = function(key){
+			try {
+				return localStorage.removeItem(key);
+			} catch (e) {
+				return false;
+			}
+		}
+		
+		this.clearScopeValues = function(scope, $exceptions){
+			var exceptions = $exceptions || [], i, j;
+			for(var i = 0, l=localStorage.length; i<l; i++){
+				var key =localStorage.key(i);
+				if (key.indexOf(scope) == 0) {
+					var cacheItemName = key.split(scope)[1].substr(1),
+					isExcepted = false;
+					for (j = 0, m=exceptions.length; j < m; j++) {
+						if(cacheItemName == exceptions[j]) isExcepted = true;
+					}
+					if(!isExcepted){
+						localStorage.removeItem(key);
+						i--;
+						l=localStorage.length;
+					}
+				}
+			}
+		}
+});
+
+
+a5.Package('a5.cl.initializers.dom')
+
+	.Import('a5.cl.CLEvent')
+	.Extends('a5.cl.CLBase')
+	.Class("EnvManager", 'singleton final', function(self, im){
+	
+		var _supportsCanvas,
+		_isOnline,
+		_clientEnvironment,
+		_clientPlatform,
+		_clientOrientation,
+		_browserVersion,
+		_environment,
+		_isBB,
+		_isLocal,
+		_appPath,
+		_appRoot;
+		
+		this.environment = function(){		return _environment;}		
+		this.clientPlatform = function(){	return _clientPlatform;	}
+		this.clientOrientation = function(){return _clientOrientation;	}
+		this.clientEnvironment = function(){return _clientEnvironment;	}
+		this.browserVersion = function(){ return _browserVersion; }	
+		this.isOnline = function(){	return _isOnline;}		
+		this.isLocal = function(){ return _isLocal; }
+		this.appPath = function(root){ return root ? _appRoot:_appPath; }	
+		
+		this.EnvManager = function($environment, $clientEnvironment){
+			self.superclass(this);
+			_isOnline = true;
+			_supportsCanvas = !!document.createElement('canvas').getContext;
+			_clientOrientation = getOrientation();
+			if($clientEnvironment) _clientEnvironment = $clientEnvironment;
+			else if(self.config().clientEnvironment)_clientEnvironment = self.config().clientEnvironment;
+			else _clientEnvironment = testForClientEnvironment();
+			testClientPlatform();
+			testBrowserVersion();
+			if($environment) _environment = $environment;
+			else _environment = self.config().environment;
+			var envObj = checkConfigProp(_environment, self.config().environments); 
+			if(envObj) a5.cl.core.Utils.mergeObject(envObj, self.config(), true);
+			var cEnvObj = checkConfigProp(_clientEnvironment, self.config().clientEnvironments);
+			if(cEnvObj) a5.cl.core.Utils.mergeObject(cEnvObj, self.config(), true);
+			_isLocal = window.location.protocol == 'file:';
+			setAppPath();
+		}
+		
+		this.initialize = function(){
+			setupWindowEvents();
+			try{
+				 document.body.addEventListener('online', update);
+				 document.body.addEventListener('offline', update);
+			} catch(e){}
+		}
+		
+		var update = function(){
+			if(navigator.onLine !== undefined){
+				var newVal = navigator.onLine;
+				if(newVal != _isOnline){
+					_isOnline = newVal;
+					a5.cl.instance().dispatchEvent(im.CLEvent.ONLINE_STATUS_CHANGE, {online:self.isOnline()});
+				}
+			}
+		}
+	
+		var testForClientEnvironment = function(){
+			if('runtime' in window){
+				return 'AIR';
+			} else if('connection' in window && 'notification' in window && 'contacts' in window){
+				return 'PHONEGAP';
+			}else {
+				var isMobile = mobileTest(),
+				isTablet = isMobile && screen.width >= self.config().mobileWidthThreshold;
+				_isBB = window.blackberry != undefined;
+				if(_isBB) isMobile = true;
+				if(isTablet) return 'TABLET';
+				else if (isMobile) return 'MOBILE';
+				else return 'DESKTOP';	
+			}	
+		}
+		
+		var mobileTest = function(){
+			if(window.orientation !== undefined)
+				return true;
+			var propArray = ['ontouchstart'];
+			var elem = document.createElement('div');
+			for (var i = 0, l = propArray.length; i<l; i++){
+				elem.setAttribute(propArray[i], 'return;');
+				if(typeof elem[propArray[i]] === 'function')
+					return true;
+			}
+			elem = null;
+			if(navigator.userAgent.toLowerCase().match(/mobile/i))
+				return true;
+			return false;
+		}
+		
+		var testClientPlatform = function(){
+			if(_isBB){
+				if(_supportsCanvas) _clientPlatform = 'BB6';
+				else _clientPlatform = 'BB';
+			} else {
+				if(navigator.userAgent.match(/iPod/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/iPad/i)) _clientPlatform = 'IOS';
+				else if(navigator.userAgent.match(/Android/i)) _clientPlatform = 'ANDROID';
+				else if(navigator.userAgent.match(/IEMobile/i)) _clientPlatform = 'WP7';
+				else if(window.ActiveXObject) _clientPlatform = 'IE';
+				// _clientPlatform = 'OSX';
+			}
+			if(!_clientPlatform) _clientPlatform = 'UNKNOWN';
+		}
+		
+		var getOrientation = function(){
+			if(typeof window.orientation !== 'undefined')
+				return (window.orientation == 0 || window.orientation === 180) ? 'PORTRAIT' : 'LANDSCAPE';
+			else
+				return 'UNKNOWN';
+		}
+		
+		var checkConfigProp = function(checkProp, obj){
+			var foundProps = [], prop, propArray, isPositiveCase, envProp, i, l, canPush, isValidForNeg, retProp = null;
+			for(prop in obj){
+				isPositiveCase = true;
+				envProp = prop;
+				if (envProp.charAt(0) === '_') {
+					isPositiveCase = false;
+					envProp = envProp.substr(1);
+				}
+				propArray = envProp.split('_');
+				canPush = false;
+				isValidForNeg = true;
+				for(i = 0, l=propArray.length; i<l; i++){
+					if(isPositiveCase){
+						 if (propArray[i] === checkProp) {
+						 	canPush = true;
+							break;
+						 }
+					} else {
+						if(propArray[i] === checkProp)
+							isValidForNeg = false;
+							break;
+					}
+				}
+				if((isPositiveCase && canPush) ||
+				   (!isPositiveCase && isValidForNeg))
+						foundProps.push(obj[prop]);
+			}
+			if(foundProps.length)
+				retProp = foundProps[0];
+			if(foundProps.length >1)
+				for(i = 1, l=foundProps.length; i<l; i++)
+					a5.cl.core.Utils.mergeObject(foundProps[i], retProp, true);
+			return retProp;
+		}
+		
+		var testBrowserVersion = function(){
+			_browserVersion = 0;
+			if (document.body.style.scrollbar3dLightColor!=undefined) {
+				if (document.body.style.opacity!=undefined) { _browserVersion = 9; }
+				else if (!self.config().forceIE7 && document.body.style.msBlockProgression!=undefined) { _browserVersion = 8; }
+				else if (document.body.style.msInterpolationMode!=undefined) { _browserVersion = 7; }
+				else if (document.body.style.textOverflow!=undefined) { _browserVersion = 6; }
+				else {_browserVersion = 5.5; }
+			}
+		}
+		
+		var setAppPath = function(){
+			var pathname = window.location.pathname;
+			if(pathname.indexOf('.') != -1) pathname = pathname.substr(0, pathname.lastIndexOf('/') + 1);
+			_appRoot = window.location.protocol + '//' + window.location.host;
+			_appPath = _appRoot + pathname;
+			if(_appPath.charAt(_appPath.length-1) != '/') _appPath += '/';
+		}
+		
+		var setupWindowEvents = function(){
+			window.onbeforeunload = function(){
+				/* need close interceptor in mvc
+				var val = self.cl().application().applicationWillClose();
+				if (typeof val == 'string') return val;
+				*/
+				self.cl().dispatchEvent(im.CLEvent.APPLICATION_WILL_CLOSE);
+			}
+			window.onunload = function(){
+				self.cl().dispatchEvent(im.CLEvent.APPLICATION_CLOSED);
+			}
+			if (self.config().trapErrors === true){
+				window.onerror = function(e, url, line){
+					e = e || window.error;
+					if(e === 'Script error.')
+						e = "Cannot discern error data from window.onerror - Possible cause is loading A5 from a cross domain source.\nTry disabling trapErrors to use the console or load a local copy of A5.";
+					var clErr = a5._a5_getThrownError();
+					if(clErr && e !== "" && e.indexOf(clErr.toString()) !== -1)
+						e = clErr;
+					else
+						e = a5.Create(a5.Error, [e, false]);
+					if(url) e.url = url;
+					if(line) e.line = line;
+					self.cl().dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
+					return false;
+				};
+			}
+			var orientationEvent = ("onorientationchange" in window) ? "onorientationchange" : "onresize";
+			window[orientationEvent] = function() {
+				self.cl().dispatchEvent(im.CLEvent.WINDOW_RESIZED);
+			    var newOrientation = getOrientation();
+				if(newOrientation !== _clientOrientation){
+					_clientOrientation = newOrientation;
+					if (_clientEnvironment === 'MOBILE' || _clientEnvironment === 'TABLET')
+						self.cl().dispatchEvent(im.CLEvent.ORIENTATION_CHANGED);
+				}
+			}
+			if (orientationEvent !== 'onresize') {
+				window.onresize = function(){
+					self.cl().dispatchEvent(im.CLEvent.WINDOW_RESIZED);
+				}
+			}
+		}
+		
+})
+
+a5.Package('a5.cl.initializers.dom')
+	.Extends('a5.cl.CLBase')
+	.Mix('a5.cl.mixins.DataStore')
+	.Static(function(ResourceCache){
+		
+		ResourceCache.BROWSER_CACHED_ENTRY = 'clResourceCacheBrowserCacheEntry';
+		
+		ResourceCache.COMBINED_DEPENDENCY = 'clResourceCacheCombinedDependcy';
+		
+		ResourceCache._cl_delimiterOpen = '<!--CL:';
+		ResourceCache._cl_delimiterClose = ':CL-->';
+	})
+	.Class('ResourceCache', 'singleton final', function(self, im, ResourceCache){
+			
+		var resources,
+			dataCache,
+			shouldUseCache,
+			requestManager,
+			cacheBreakValue,
+			cacheTypes = [
+				{type:'html', extension:'html'},
+				{type:'html', extension:'htm'},
+				{type:'js', extension:'js'},
+				{type:'text', extension:'txt'},
+				{type:'image', extension:'jpg'},
+				{type:'image', extension:'gif'},
+				{type:'image', extension:'png'},
+				{type:'css', extension:'css'},
+				{type:'xml', extension:'xml'}
+			];
+		
+		
+		this.ResourceCache = function(){
+			this.superclass(this);
+			a5.cl.CreateCallback(eAppIntializingHandler);
+			resources = {};
+		}
+		
+		var eAppIntializingHandler = function(){
+			requestManager = a5.cl.core.RequestManager.instance();
+			cacheTypes = cacheTypes.concat(self.config().cacheTypes);
+			if(self.config().cacheBreak && typeof self.config().applicationBuild === 'string'){
+				var trimVal = im.Utils.trim(self.config().applicationBuild);
+				if(trimVal !== "")
+					cacheBreakValue = trimVal;
+			}
+		}
+		
+		this.initStorageRules = function(){
+			var manifestBuild = this.cl().manifestBuild(),
+				storedBuild = this.getValue('build') || -1;
+			shouldUseCache = (this.cl().isOfflineCapable() && this.cl().environment() === 'PRODUCTION');
+			if(manifestBuild && manifestBuild > storedBuild) this.clearScopeValues();
+			if(shouldUseCache) this.storeValue('build', manifestBuild);
+			else this.clearScopeValues();
+		}
+		
+		this.load = function(value, callback, itemCallback, onerror, asXHR){
+			var urlArray = [],
+			retValue,
+			loadCount = 0,
+			totalItems, 
+			percentPer, 
+			asXHR = asXHR || false,
+			elem;
+			if (typeof value == 'string') {
+				urlArray.push(value);
+				retValue = null;
+			} else {
+				urlArray = value;
+				retValue = [];
+			}
+			a5._a5_delayProtoCreation(true);
+			totalItems = urlArray.length;
+			percentPer = 100 / totalItems;
+			if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {	
+				fetchURL(urlArray[loadCount]);
+			} else {
+				for(var i = 0, l = urlArray.length; i<l; i++)
+					fetchURL(urlArray[i]);
+			}
+			
+			function fetchURL(urlObj){
+				var url = null;
+				var type = null;
+				if (urlObj != undefined) {
+					if (typeof urlObj == 'string') {
+						url = urlObj;
+						type = discernType(url);
+					} else {
+						url = urlObj[0];
+						type = urlObj[1];
+					}
+				}
+				
+				function completeLoad(retValue){
+					a5._a5_createQueuedPrototypes();
+					a5._a5_verifyPackageQueueEmpty();
+					a5._a5_delayProtoCreation(false);
+					if (callback) 
+						callback(retValue);
+				}
+				
+				function continueLoad(data){
+					loadCount++;
+					var percent = Math.floor((loadCount / totalItems) * 100);
+					if (itemCallback) itemCallback({
+						loadCount: loadCount,
+						totalItems: totalItems,
+						data:data,
+						itemURL: url,
+						itemType: type,
+						percent: percent
+					});
+					if(totalItems == 1) retValue = data;
+					else retValue.push(data);
+					if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {
+						if (loadCount == totalItems) {
+							completeLoad(retValue);
+						} else {
+							fetchURL(urlArray[loadCount]);
+						}
+					} else {
+						if (loadCount === urlArray.length) {
+							completeLoad(retValue);
+						}
+					}
+				}
+				var cacheValue = checkCache(url);
+				if (!cacheValue) {
+					if (type) {
+						url = im.Utils.makeAbsolutePath(checkReplacements(url));
+						if(cacheBreakValue)
+							url = url + '?a5=' + cacheBreakValue;
+						if (type === 'css') {
+							var cssError = function(){
+								if (onerror) onerror(url);
+								else self.throwError('Error loading css resource at url ' + url);
+							},
+							headID = document.getElementsByTagName("head")[0],
+							elem = document.createElement('link');
+							elem.onerror = cssError;
+							elem.href =  url;
+							elem.rel = 'stylesheet';
+							elem.media = 'screen';
+							headID.appendChild(elem);
+							updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
+							continueLoad();
+							elem = headID = null;
+						} else if (type === 'image'){
+							var imgObj = new Image(),
+							clearImage = function(){
+								a5.cl.mvc.core.GarbageCollector.instance().destroyElement(imgObj);
+								imgObj = null;
+								updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
+								continueLoad();
+							},
+							imgError = function(){
+								if (onerror) onerror(url);
+								else self.redirect(500, 'Error loading image resource at url ' + url);
+							};
+												
+							imgObj.onload = clearImage;
+							imgObj.onerror = imgError;
+							imgObj.src = data;
+						} else if (type === 'js' && self.config().xhrDependencies === false && asXHR == false){
+							var insertElem = function(){
+								head.insertBefore(include, head.firstChild);
+							}
+							var head = document.getElementsByTagName("head")[0], include = document.createElement("script");
+							include.type = "text/javascript";		
+							include.src = url;
+							if(include.readyState){
+								include.onreadystatechange = function(){
+									if (this.readyState == 'loaded' || this.readyState == 'complete') continueLoad();
+								}
+							} else {
+								include.onload = continueLoad;
+							}
+							insertElem();
+						} else {
+							var reqObj = {
+								url: url,
+								method: 'GET',
+								contentType: 'text/plain',
+								success: function(data){
+									data = updateCache(url, type, data);
+									processData(url, data, type, function(){
+										continueLoad(data);
+									});
+								},
+								error: function(){
+									if (onerror) onerror(url);
+									else self.redirect(500, 'Error loading resource at url ' + url);
+								}
+							}
+							if (typeof itemCallback === 'function') {
+								reqObj.progress = function(e){
+									itemCallback({
+										loadCount: loadCount,
+										totalItems: totalItems,
+										itemURL: url,
+										itemType: type,
+										percent: Math.floor(percentPer * loadCount + percentPer * Math.floor(e.loaded / e.total))
+									});
+								}
+							}
+							reqObj.silent = self.config().silentIncludes === true;
+							requestManager.makeRequest(reqObj)
+						}
+					} else {
+						throw 'Unknown include type for included file "' + url + '".';
+					}
+				} else {
+					if(cacheValue === ResourceCache.BROWSER_CACHED_ENTRY)
+							continueLoad(null);
+						else
+							continueLoad(cacheValue);
+				}			
+			}
+		}
+		
+		this.getCachedHTML = function(id, callback){
+			var obj = resources[id];
+			if (obj && obj.isID && obj.type === 'html') {
+				var docFrag = document.createDocumentFragment();
+				docFrag.innerHTML = obj.data;
+				return docFrag;
+			}
+			return null;
+		}
+		
+		this.purgeAllCaches = function($restartOnComplete){
+			//orm integration?
+			if(window.localStorage !== undefined) localStorage.clear();
+			self.cl().purgeApplicationCache($restartOnComplete);
+		}
+		
+		this.combineMarkupResources = function(){
+			var combined = "";
+			for(var prop in resources){
+				var thisResource = resources[prop];
+				if(thisResource.type === 'xml' || thisResource.type === 'html'){
+					combined += ResourceCache._cl_delimiterOpen + ' ';
+					combined += (thisResource.isID ? 'id=' : 'url=') + prop;
+					combined += ' type=' + thisResource.type;
+					combined += ' ' + ResourceCache._cl_delimiterClose + '\n\n';
+					combined += thisResource.data + '\n\n';
+				}
+			}
+			return combined;
+		}
+		
+		var checkCache = function(url){
+			var value = resources[url],
+				cached = (typeof value === 'object');
+			if(!value && shouldUseCache && value !== ResourceCache.BROWSER_CACHED_ENTRY && value !== ResourceCache.COMBINED_DEPENDENCY)
+				value = self.getValue(url);
+			return (cached ? value.data : null);
+		}
+		
+		var updateCache = function(url, type, value, fromStorage, isID){
+			value = a5.cl.core.Utils.trim(value);
+			var regex = new RegExp(ResourceCache._cl_delimiterOpen + '.*?' + ResourceCache._cl_delimiterClose, 'g');
+			if(regex.test(value)){
+				if (value.indexOf(ResourceCache._cl_delimiterOpen) !== 0) {
+					self.throwError('Error parsing combined resource: ' + url + '\n\nCombined XML and HTML resources must start with a delimiter');
+					return;
+				}
+				//if the loaded content is a combined file, uncombine it and store each piece
+				var result, delimiters = [];
+				//find all of the delimiters
+				regex.lastIndex = 0;
+				while(result = regex.exec(value))
+					delimiters.push({index:regex.lastIndex, match:a5.cl.core.Utils.trim(result[0])});
+				//loop through each delimiter
+				for(var x = 0, xl = delimiters.length; x < xl; x++){
+					var thisDelimiter = delimiters[x],
+						//get the content associated with this delimiter
+						dataSnippet = value.substring(thisDelimiter.index, (x < xl - 1) ? delimiters[x + 1].index : value.length).replace(regex, ""),
+						//remove the delimiter open and close tags to get the params
+						paramString = thisDelimiter.match.replace(ResourceCache._cl_delimiterOpen, '').replace(ResourceCache._cl_delimiterClose, ''),
+						//split the params into an array
+						paramList = a5.cl.core.Utils.trim(paramString).split(' '),
+						params = {};
+					//process each parameter into a name/value pair
+					for(var y = 0, yl = paramList.length; y < yl; y++){
+						var splitParam = paramList[y].split('='),
+							paramName = splitParam.length > 1 ? splitParam[0] : 'url',
+							paramValue = splitParam.pop();
+						params[paramName] = paramValue;
+					}
+					if(params.url)
+						params.url = a5.cl.core.Utils.makeAbsolutePath(params.url);
+					updateCache(params.url || params.id, params.type || type, dataSnippet, false, !params.url);
+				}
+				updateCache(url, type, ResourceCache.COMBINED_DEPENDENCY);
+				return null;
+			} else {
+				resources[url] = {
+					type: type,
+					data: value,
+					isID: isID === true
+				};
+				if(shouldUseCache && !fromStorage)
+					self.storeValue(url, value);
+				return value;
+			}
+		}
+		
+		var discernType = function(url){
+			var urlArray = url.split('.'),
+				extension = urlArray[urlArray.length-1].replace(/\?.*$/, ''); //the replace() removes querystring params
+			for (var i = 0, l=cacheTypes.length; i < l; i++) {
+				if (typeof cacheTypes[i] != 'object' ||
+				cacheTypes[i].extension == undefined ||
+				cacheTypes[i].type == undefined) {
+					throw 'Improper config cacheType specified: ' + cacheTypes[i].toString();
+				} else if (extension == cacheTypes[i].extension) {
+					return cacheTypes[i].type;
+				}
+			}
+			return null;
+		}
+		
+		var processData = function(url, data, type, callback){
+			switch (type){
+				case 'js':
+					try {
+						var insertElem = function(){
+							head.insertBefore(include, head.firstChild);
+						}
+						var head = document.getElementsByTagName("head")[0], include = document.createElement("script");
+						include.type = "text/javascript";					
+						try {
+							include.appendChild(document.createTextNode(data));
+						} catch (e) {
+							include.text = data;
+						} finally {
+							insertElem();
+							callback();
+						}
+					} catch (e) {
+						self.throwError(e);
+					} finally {
+						include = head = null;
+					}
+					break;
+				case 'html':
+				case 'xml':
+				default:
+					callback();
+			}
+		}
+		
+		var checkReplacements = function(url){
+			var env = self.cl().initializer().environmentManager();
+			return url.replace('{CLIENT_ENVIRONMENT}', env.clientEnvironment()).replace('{ENVIRONMENT}', env.environment());
+		}
+	
+})
+
+a5.Package('a5.cl.initializers.dom')
+
+	.Extends('a5.cl.CLBase')
+	.Class('ManifestManager', 'singleton final', function(self){
+	
+		var _isOfflineCapable,
+		appCache,
+		_manifestBuild = null,
+		manifestHref;
+		
+		this.ManifestManager = function(){
+			self.superclass(this);
+			manifestHref = document.getElementsByTagName('html')[0].getAttribute('manifest');
+			appCache = window.applicationCache;
+			_isOfflineCapable = appCache && manifestHref ? true:false;
+			if(_isOfflineCapable) 
+				initialize();
+		}
+		
+		this.manifestBuild = function(){	return _manifestBuild; }
+		this.isOfflineCapable = function(){	return _isOfflineCapable;}
+		
+		this.purgeApplicationCache = function($restartOnComplete){
+			var restartOnComplete = ($restartOnComplete == false ? false:true);
+			var updateReady = function(){
+				appCache.swapCache();
+				if(restartOnComplete) 
+					self.cl().relaunch(true);
+			}
+			if (appCache.status == 1) {
+				appCache.addEventListener('updateready', updateReady, false);
+				appCache.update();
+			} else {
+				throw 'Cannot purge application cache, appCache status is ' + appCache.status;
+			}
+		}
+		
+		var initialize = function(){
+			checkManifestBuild(manifestHref);
+			appCache.addEventListener('error', onerror, false);
+		}
+		
+		var checkManifestBuild = function(manifestHref){
+			var resourceCache = a5.cl.core.ResourceCache.instance(), 
+			result;
+			self.cl().include(manifestHref, function(data){
+				result = data.match(/#build\b.[0-9]*/);
+				if(result){
+					result = result[0];
+					result = result.split('#build')[1];
+					result = parseInt(a5.cl.core.Utils.trim(result));
+					if(!isNaN(result)) _manifestBuild = result;
+				}
+			})
+		}
+		
+		var onerror = function(e){
+			self.redirect(500, 'Error loading manifest');
+		}
+})
+
+a5.Package('a5.cl.initializers.dom')
+	
+	.Import('a5.cl.CLEvent')
+    .Extends('a5.cl.CLInitializer')
+    .Class('DOMInitializer', function (cls, im) {
+
+		var resourceCache,
+			envManager;
+
+        cls.DOMInitializer = function () {
+            cls.superclass(this);
+			resourceCache = cls.create(im.ResourceCache);
+        }
+		
+		cls.environmentManager = function(){
+			return envManager;
+		}		
+				
+		cls.resourceCache = function(){
+			return resourceCache;
+		}
+		
+		cls.Override.load = function(arr, complete, progress){
+			return resourceCache.load(arr, complete, progress);
+		}
+
+        cls.Override.initialize = function (callback) {
+            var initialized = false,
+
+            onDomReady = function () {
+                if (!initialized) {
+                    initialized = true;
+                    callback();
+                }
+            },
+
+            domContentLoaded = function () {
+                if (document.addEventListener) {
+                    document.removeEventListener("DOMContentLoaded", domContentLoaded, false);
+                    onDomReady();
+                } else if (document.attachEvent) {
+                    if (document.readyState === "complete") {
+                        document.detachEvent("onreadystatechange", domContentLoaded);
+                        onDomReady();
+                    }
+                }
+            }
+
+            if (document.readyState === "complete") {
+                onDomReady();
+            } else if (document.addEventListener) {
+                document.addEventListener("DOMContentLoaded", domContentLoaded, false);
+            } else if (document.attachEvent) {
+                document.attachEvent("onreadystatechange", domContentLoaded);
+            }
+        }
+		
+		cls.Override.applicationInitialized = function(inst){
+			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
+			envManager = cls.create(im.EnvManager, [inst.config().environment, inst.config().clientEnvironment]);
+		}
+		
+		var eAppPreparedHandler = function(){
+			envManager.initialize();
+		}
+});
+
+
+a5.Package('a5.cl.initializers.dom')
+	.Static('Utils', function(Utils){
+		
+		Utils.vendorPrefixes = ['-webkit-', '-moz-', '-ms-', '-o-'];
+		Utils.jsVendorPrefixes = ['Webkit', 'Moz', 'ms', 'o'];
+		Utils.jsVendorMethodPrefixes = ['webkit', 'moz', 'ms', 'o'];
+		
+		Utils.purgeBody = function(){
+			var body = document.getElementsByTagName('body')[0];
+			body.innerHTML = '';
+			body.style.margin = '0px';
+		}
+		
+		Utils.getParameterByName = function(name){
+		    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+		    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+		}
+		
+		Utils.isAbsolutePath = function(url){
+			return (url.indexOf('://') !== -1 || url.substr(0, 1) == '/');
+		}
+		
+		Utils.makeAbsolutePath = function(url){
+			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.instance().initializer().environmentManager().appPath() + url);
+		}
+		
+		Utils.generateSystemHTMLTemplate = function(type, str, replBody){
+			var retHtml = '<div style="margin:0px auto;text-align:center;font-family:Arial;"><h1>A5 CL: ' + type + ' Error</h1>\
+				<div style="text-align:left;margin-bottom:50px;">' + str + '</div></div>';
+			if (replBody) {
+				var body = document.getElementsByTagName('body')[0];
+				if(body) body.innerHTML = retHtml;
+				else throw str;
+			}
+			return retHtml;
+		}
+		
+		Utils.addEventListener = function(target, type, listener, useCapture){
+			var type = type.indexOf('on') === 0 ? type.substr(2) : type,
+				useCapture = useCapture || false;
+			if(typeof target.addEventListener === 'function')
+				target.addEventListener(type, listener, useCapture);
+			else
+				target.attachEvent('on' + type, listener);
+		}
+		
+		Utils.removeEventListener = function(target, type, listener, useCapture){
+			var type = type.indexOf('on') === 0 ? type.substr(2) : type;
+			if(typeof target.addEventListener === 'function')
+				target.removeEventListener(type, listener, useCapture);
+			else
+				target.detachEvent('on' + type, listener);
+		}
+		
+		Utils.getVendorWindowMethod = function(type){
+			var retVal = null,
+				i, l, thisProp,
+				regex = /-/g;
+			while(regex.test(type)){
+				type = type.substring(0, regex.lastIndex - 1) + type.substr(regex.lastIndex, 1).toUpperCase() + type.substr(regex.lastIndex + 1);
+				regex.lastIndex = 0;
+			}
+		    for (i = 0, l = Utils.jsVendorMethodPrefixes.length; i <= l; i++) {
+				thisProp = i === l ? type : (Utils.jsVendorMethodPrefixes[i] + type.substr(0, 1).toUpperCase() + type.substr(1));
+				if(typeof window[thisProp] === "function"){
+					retVal = window[thisProp];
+					break;
+				}
+			}
+			return retVal;
+		}
+		
+		Utils.getCSSProp = function(type){
+			var elem = document.createElement('div'),
+				retVal = null,
+				i, l, thisProp,
+				regex = /-/g;
+			while(regex.test(type)){
+				type = type.substring(0, regex.lastIndex - 1) + type.substr(regex.lastIndex, 1).toUpperCase() + type.substr(regex.lastIndex + 1);
+				regex.lastIndex = 0;
+			}
+		    for (i = 0, l = Utils.jsVendorPrefixes.length; i <= l; i++) {
+				thisProp = i === l ? type : (Utils.jsVendorPrefixes[i] + type.substr(0, 1).toUpperCase() + type.substr(1));
+				if(retVal === null && typeof elem.style[thisProp] === "string"){
+					retVal = thisProp;
+					break;
+				}
+			}
+			//a5.cl.core.GarbageCollector.instance().destroyElement(elem);
+			elem = null;
+			return retVal;
+		}
+		
+		/**
+		 * Get the vendor-specific value for a CSS property.  For example, display:box should become something like display:-moz-box.
+		 * @param {Object} prop The CSS property to use.
+		 * @param {Object} value The standards-compliant value. (without a vendor prefix)
+		 */
+		Utils.getVendorCSSValue = function(prop, value){
+			var elem = document.createElement('div'),
+				returnVal = value,
+				x, y, prefixedValue;
+			for(x = 0, y = Utils.vendorPrefixes.length; x <= y; x++){
+				prefixedValue = (x === 0 ? '' : Utils.vendorPrefixes[x - 1]) + value;
+				elem.style[prop] = prefixedValue;
+				if (elem.style[prop] === prefixedValue) {
+					returnVal =  prefixedValue;
+					break;
+				}
+			}
+			//a5.cl.core.GarbageCollector.instance().destroyElement(elem);
+			elem = null;
+			return returnVal;
+		}
+		
+		Utils.setVendorCSS = function(elem, prop, value, prefixValue){
+			prefixValue = prefixValue === true; 
+			elem.style.setProperty(prop, value, null);
+			for(var x = 0, y = Utils.vendorPrefixes.length; x < y; x++){
+				elem.style.setProperty((prefixValue ? '' : Utils.vendorPrefixes[x]) + prop, (prefixValue ? Utils.vendorPrefixes[x] : '') + value, null);
+			}
+		}
+		
+		Utils.elementInDocument = function(elem){
+			while(elem){
+				if(elem === document)
+					return true;
+				elem = elem.parentNode;
+			}
+			return false;
+		}
+});
+
+﻿
+a5.Package('a5.cl.initializers.dom')
+
+	.Extends('a5.cl.CLAddon')
+	.Class('DOM', 'singleton', function(cls, im, DOM){
+		
+		var manifestManager;
+		
+		cls.DOM = function(){
+			cls.superclass(this);
+		}
+		
+		cls.Override.initializePlugin = function(){
+			manifestManager = cls.create(im.ManifestManager);
+		}
+		
+		cls.manifestManager = function(){
+			return cls.cl().initializer().manifestManager();
+		}
+		
+		cls.environmentManager = function(){
+			return envManager;
+		}
+		
+		/**
+		 *
+		 * @type String
+		 * @param {Boolean} [root]
+		 */
+		cls.appPath = function(root){ return envManager.appPath(root); }
+		
+		/**
+		 *
+		 * @type Number
+		 */
+		cls.browserVersion = function(){	return envManager.browserVersion();	}
+		
+		/**
+		 * Defines A5 CL client environment types. One of 'DESKTOP', 'MOBILE', or 'TABLET'.
+		 *
+		 * @type String
+		 */
+		cls.clientEnvironment = function(){	return envManager.clientEnvironment.apply(null, arguments);	}
+		
+		/**
+		 * Defines A5 CL client platform types.<br/>
+		 * Values:<br/>
+		 * 'BB6' - BlackBerry OS 6<br/>
+		 * 'BB' - BlackBerry OS 5 and under<br/>
+		 * 'IOS' - Apple iOS<br/>
+		 * 'ANDROID' - Google Android<br/>
+		 * 'IE' - Internet Explorer<br/>
+		 * 'UNKNOWN' - Unknown platform.<br/>
+		 *
+		 * @type String
+		 */
+		cls.clientPlatform = function(){		return envManager.clientPlatform();	}
+		
+		/**
+		 * 
+		 */
+		cls.clientOrientation = function(){ return envManager.clientOrientation(); }	
+		
+		
+		/**
+		 * Defines AirFrame CL development environment types. One of 'DEVELOPMENT', 'TEST', or 'PRODUCTION'.
+		 *
+		 * @type String
+		 */
+		cls.environment = function(){	return envManager.environment();	}
+		
+		/**
+		 * Returns whether the client environment supports manifest caching.
+		 *
+		 */
+		cls.isOfflineCapable = function(){		return manifestManager.isOfflineCapable();	}
+		
+		/**
+		 * Returns whether the application is running on http:// or file://
+		 *
+		 */
+		cls.isLocal = function(){ return envManager.isLocal(); }
+		
+		/**
+		 * Returns the current online state of the client browser, where supported.
+		 *
+		 */
+		cls.isOnline = function(){	return envManager.isOnline();	}	
+		
+});
+
+a5.Create(a5.cl.initializers.dom.DOMInitializer);
 
