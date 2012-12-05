@@ -15,12 +15,12 @@ a5.Package('a5.cl.core')
 			asyncRunning = false,
 			reqCount;
 	
-		this.RequestManager = function(){
+		this.RequestManager = function(defMethod, defType){
 			self.superclass(this, arguments);
 			reqArray = [];
 			reqCount = 0;
-			defaultContentType = self.config().requestDefaultContentType;
-			defaultMethod = self.config().requestDefaultMethod;
+			defaultContentType = defType;
+			defaultMethod = defMethod;
 		}
 		
 		this.asyncRunning = function(){

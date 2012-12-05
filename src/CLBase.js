@@ -20,7 +20,7 @@ a5.Package('a5.cl')
 		 * @return {a5.cl.CL}
 		 */
 		proto.cl = function(){
-			return a5.cl.instance();
+			return a5.cl.Instance();
 		}
 		
 		/**
@@ -60,14 +60,6 @@ a5.Package('a5.cl')
 		
 		proto.Override.throwError = function(error){
 			proto.superclass().throwError(error, a5.cl.CLError);
-		}
-		
-		/**
-		 * Returns a reference to the configuration object for the A5 CL application instance.
-		 * @return {a5.cl.CLConfig}
-		 */
-		proto.config = function(){
-			return this.cl().config();
 		}
 		
 		/**

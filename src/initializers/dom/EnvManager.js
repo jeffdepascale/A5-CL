@@ -7,11 +7,14 @@ a5.Package('a5.cl.initializers.dom')
 	
 		var _supportsCanvas,
 		_isOnline,
+		_mobileWidthThreshold,
+		_forceIE7,
 		_clientEnvironment,
 		_clientPlatform,
 		_clientOrientation,
 		_browserVersion,
 		_environment,
+		_trapErrors,
 		_isBB,
 		_isLocal,
 		_appPath,
@@ -31,22 +34,19 @@ a5.Package('a5.cl.initializers.dom')
 			_isOnline = true;
 			_supportsCanvas = !!document.createElement('canvas').getContext;
 			_clientOrientation = getOrientation();
-			if($clientEnvironment) _clientEnvironment = $clientEnvironment;
-			else if(self.config().clientEnvironment)_clientEnvironment = self.config().clientEnvironment;
-			else _clientEnvironment = testForClientEnvironment();
-			testClientPlatform();
-			testBrowserVersion();
-			if($environment) _environment = $environment;
-			else _environment = self.config().environment;
-			var envObj = checkConfigProp(_environment, self.config().environments); 
-			if(envObj) a5.cl.core.Utils.mergeObject(envObj, self.config(), true);
-			var cEnvObj = checkConfigProp(_clientEnvironment, self.config().clientEnvironments);
-			if(cEnvObj) a5.cl.core.Utils.mergeObject(cEnvObj, self.config(), true);
+			_environment = $environment;
 			_isLocal = window.location.protocol == 'file:';
 			setAppPath();
 		}
 		
-		this.initialize = function(){
+		this.initialize = function(trapErrors){
+			var pc = self.DOM().pluginConfig();
+			_trapErrors = pc.trapErrors;
+			_mobileWidthThreshold = pc.mobileWidthThreshold;
+			_forceIE7 = pc.forceIE7;
+			_clientEnvironment = testForClientEnvironment();
+			testClientPlatform();
+			testBrowserVersion();
 			setupWindowEvents();
 			try{
 				 document.body.addEventListener('online', update);
@@ -59,7 +59,7 @@ a5.Package('a5.cl.initializers.dom')
 				var newVal = navigator.onLine;
 				if(newVal != _isOnline){
 					_isOnline = newVal;
-					a5.cl.instance().dispatchEvent(im.CLEvent.ONLINE_STATUS_CHANGE, {online:self.isOnline()});
+					self.cl().dispatchEvent(im.CLEvent.ONLINE_STATUS_CHANGE, {online:self.isOnline()});
 				}
 			}
 		}
@@ -71,7 +71,7 @@ a5.Package('a5.cl.initializers.dom')
 				return 'PHONEGAP';
 			}else {
 				var isMobile = mobileTest(),
-				isTablet = isMobile && screen.width >= self.config().mobileWidthThreshold;
+				isTablet = isMobile && screen.width >= _mobileWidthThreshold;
 				_isBB = window.blackberry != undefined;
 				if(_isBB) isMobile = true;
 				if(isTablet) return 'TABLET';
@@ -117,47 +117,11 @@ a5.Package('a5.cl.initializers.dom')
 				return 'UNKNOWN';
 		}
 		
-		var checkConfigProp = function(checkProp, obj){
-			var foundProps = [], prop, propArray, isPositiveCase, envProp, i, l, canPush, isValidForNeg, retProp = null;
-			for(prop in obj){
-				isPositiveCase = true;
-				envProp = prop;
-				if (envProp.charAt(0) === '_') {
-					isPositiveCase = false;
-					envProp = envProp.substr(1);
-				}
-				propArray = envProp.split('_');
-				canPush = false;
-				isValidForNeg = true;
-				for(i = 0, l=propArray.length; i<l; i++){
-					if(isPositiveCase){
-						 if (propArray[i] === checkProp) {
-						 	canPush = true;
-							break;
-						 }
-					} else {
-						if(propArray[i] === checkProp)
-							isValidForNeg = false;
-							break;
-					}
-				}
-				if((isPositiveCase && canPush) ||
-				   (!isPositiveCase && isValidForNeg))
-						foundProps.push(obj[prop]);
-			}
-			if(foundProps.length)
-				retProp = foundProps[0];
-			if(foundProps.length >1)
-				for(i = 1, l=foundProps.length; i<l; i++)
-					a5.cl.core.Utils.mergeObject(foundProps[i], retProp, true);
-			return retProp;
-		}
-		
 		var testBrowserVersion = function(){
 			_browserVersion = 0;
 			if (document.body.style.scrollbar3dLightColor!=undefined) {
 				if (document.body.style.opacity!=undefined) { _browserVersion = 9; }
-				else if (!self.config().forceIE7 && document.body.style.msBlockProgression!=undefined) { _browserVersion = 8; }
+				else if (!_forceIE7 && document.body.style.msBlockProgression!=undefined) { _browserVersion = 8; }
 				else if (document.body.style.msInterpolationMode!=undefined) { _browserVersion = 7; }
 				else if (document.body.style.textOverflow!=undefined) { _browserVersion = 6; }
 				else {_browserVersion = 5.5; }
@@ -174,16 +138,12 @@ a5.Package('a5.cl.initializers.dom')
 		
 		var setupWindowEvents = function(){
 			window.onbeforeunload = function(){
-				/* need close interceptor in mvc
-				var val = self.cl().application().applicationWillClose();
-				if (typeof val == 'string') return val;
-				*/
 				self.cl().dispatchEvent(im.CLEvent.APPLICATION_WILL_CLOSE);
 			}
 			window.onunload = function(){
 				self.cl().dispatchEvent(im.CLEvent.APPLICATION_CLOSED);
 			}
-			if (self.config().trapErrors === true){
+			if (_trapErrors === true){
 				window.onerror = function(e, url, line){
 					e = e || window.error;
 					if(e === 'Script error.')

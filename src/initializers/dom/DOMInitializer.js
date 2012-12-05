@@ -5,6 +5,7 @@ a5.Package('a5.cl.initializers.dom')
     .Class('DOMInitializer', function (cls, im) {
 
 		var resourceCache,
+			props,
 			envManager;
 
         cls.DOMInitializer = function () {
@@ -23,8 +24,9 @@ a5.Package('a5.cl.initializers.dom')
 			return resourceCache.load(arr, complete, progress);
 		}
 
-        cls.Override.initialize = function (props, callback) {
-            var initialized = false,
+        cls.Override.initialize = function (_props, callback) {
+            props = _props;
+			var initialized = false,
 
             onDomReady = function () {
                 if (!initialized) {
@@ -56,8 +58,12 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.Override.applicationInitialized = function(inst){
 			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
-			resourceCache = cls.create(im.ResourceCache);
-			envManager = cls.create(im.EnvManager, [inst.config().environment, inst.config().clientEnvironment]);
+			resourceCache = cls.create(im.ResourceCache, [props.cacheTypes || [], 
+									props.cacheBreak || false, 
+									props.staggerDependencies || true,
+									props.xhrDependencies || false,
+									props.silentIncludes || false]);
+			envManager = cls.create(im.EnvManager, [inst.environment()]);
 		}
 		
 		var eAppPreparedHandler = function(){

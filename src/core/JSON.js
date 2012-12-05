@@ -64,7 +64,7 @@ a5.cl.core.JSON = function(){
 		if (replacer && typeof replacer !== 'function' &&
 		(typeof replacer !== 'object' ||
 		typeof replacer.length !== 'number')) {
-			a5.cl.instance().redirect(500, 'JSON stringify error.');
+			throw 'JSON stringify error.';
 		}
 		return str('', {
 			'': value
@@ -110,7 +110,7 @@ a5.cl.core.JSON = function(){
 				'': j
 			}, '') : j;
 		}
-		a5.cl.instance().redirect(500, new SyntaxError('JSON.parse'));
+		throw new SyntaxError('JSON.parse');
 	};
 	
 	var f = function(n){

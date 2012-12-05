@@ -45,6 +45,10 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
 		}
 		
+		proto.Override.cl = function(){
+			return a5.cl.CL.instance();
+		}
+		
 		proto.allowUntestedPlugins = function(val){ _params.allowUntestedPlugins = val; }
 		
 		proto.appName = function(val){ _params.appName = val; }

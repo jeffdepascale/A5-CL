@@ -15,7 +15,11 @@ a5.Package('a5.cl.initializers.dom')
 			
 		var resources,
 			dataCache,
+			shouldCacheBreak,
+			staggerDependencies,
+			xhrDependencies,
 			shouldUseCache,
+			silentIncludes,
 			requestManager,
 			cacheBreakValue,
 			cacheTypes = [
@@ -31,24 +35,28 @@ a5.Package('a5.cl.initializers.dom')
 			];
 		
 		
-		this.ResourceCache = function(){
+		this.ResourceCache = function(_cacheTypes, _cacheBreak, _staggerDependencies, _xhrDependencies, _silentIncludes){
 			this.superclass(this);
+			cacheTypes = cacheTypes.concat(_cacheTypes);
+			shouldCacheBreak = _cacheBreak;
+			staggerDependencies = _staggerDependencies;
+			xhrDependencies = _xhrDependencies;
+			silentIncludes = _silentIncludes;
 			self.cl().addOneTimeEventListener(im.CLEvent.CORE_LOADED, eAppIntializingHandler);
 			resources = {};
 		}
 		
 		var eAppIntializingHandler = function(){
 			requestManager = a5.cl.core.RequestManager.instance();
-			cacheTypes = cacheTypes.concat(self.config().cacheTypes);
-			if(self.config().cacheBreak && typeof self.config().applicationBuild === 'string'){
-				var trimVal = im.Utils.trim(self.config().applicationBuild);
+			if(shouldCacheBreak && typeof self.cl().applicationBuild() === 'string'){
+				var trimVal = im.Utils.trim(self.cl().applicationBuild());
 				if(trimVal !== "")
 					cacheBreakValue = trimVal;
 			}
 		}
 		
 		this.initStorageRules = function(){
-			var manifestBuild = this.cl().manifestBuild(),
+			var manifestBuild = this.DOM().manifestBuild(),
 				storedBuild = this.getValue('build') || -1;
 			shouldUseCache = (this.cl().isOfflineCapable() && this.cl().environment() === 'PRODUCTION');
 			if(manifestBuild && manifestBuild > storedBuild) this.clearScopeValues();
@@ -74,7 +82,8 @@ a5.Package('a5.cl.initializers.dom')
 			a5._a5_delayProtoCreation(true);
 			totalItems = urlArray.length;
 			percentPer = 100 / totalItems;
-			if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {	
+			
+			if (staggerDependencies || xhrDependencies || asXHR) {	
 				fetchURL(urlArray[loadCount]);
 			} else {
 				for(var i = 0, l = urlArray.length; i<l; i++)
@@ -115,7 +124,7 @@ a5.Package('a5.cl.initializers.dom')
 					});
 					if(totalItems == 1) retValue = data;
 					else retValue.push(data);
-					if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {
+					if (staggerDependencies || xhrDependencies || asXHR) {
 						if (loadCount == totalItems) {
 							completeLoad(retValue);
 						} else {
@@ -164,7 +173,7 @@ a5.Package('a5.cl.initializers.dom')
 							imgObj.onload = clearImage;
 							imgObj.onerror = imgError;
 							imgObj.src = data;
-						} else if (type === 'js' && self.config().xhrDependencies === false && asXHR == false){
+						} else if (type === 'js' && xhrDependencies === false && asXHR == false){
 							var insertElem = function(){
 								head.insertBefore(include, head.firstChild);
 							}
@@ -206,7 +215,7 @@ a5.Package('a5.cl.initializers.dom')
 									});
 								}
 							}
-							reqObj.silent = self.config().silentIncludes === true;
+							reqObj.silent = silentIncludes === true;
 							requestManager.makeRequest(reqObj)
 						}
 					} else {

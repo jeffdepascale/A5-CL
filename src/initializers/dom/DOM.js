@@ -8,17 +8,13 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.DOM = function(){
 			cls.superclass(this);
-			cls.configDefaults({
-				cacheBreak:false,
-				cacheTypes:[],
+			cls.configDefaults({				
 				clientEnvironment:null,
+				forceIE7:true,
 				clientEnvironmentOverrides:false,
 				mobileWidthThreshold:768,		
-				silentIncludes:false,
-				staggerDependencies:true,
 				titleDelimiter:': ',
-				trapErrors:false,
-				xhrDependencies:false
+				trapErrors:false
 			});
 		}
 		

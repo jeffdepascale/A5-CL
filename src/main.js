@@ -2,11 +2,12 @@
 a5.SetNamespace('a5.cl', true, function(){
 
     var initializer = null,
+		inst,
         createCalled = false,
         createCallbacks = [];
 
-    var instance = function () {
-        return a5.cl.CL.instance();
+    var Instance = function () {
+        return inst;
     },
 
     /**
@@ -33,8 +34,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  if (callback && typeof callback === 'function')
                      CreateCallback(callback);
                  var initializeComplete = function () {
-                     a5.Create(a5.cl.CL, [props || {}, initializer]);
-                    var inst = a5.cl.instance();
+                    inst = a5.Create(a5.cl.CL, [props || {}, initializer]);
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
                     createCallbacks = null;
@@ -69,7 +69,7 @@ a5.SetNamespace('a5.cl', true, function(){
      }
 
      return {
-         instance:instance,
+         Instance:Instance,
          CreateApplication:CreateApplication,
          RegisterInitializer: RegisterInitializer,
          CreateCallback:CreateCallback

@@ -7,7 +7,7 @@ a5.Package('a5.cl.core')
 		}
 		
 		Utils.makeAbsolutePath = function(url){
-			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.instance().initializer().environmentManager().appPath() + url);
+			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.Instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.Instance().initializer().environmentManager().appPath() + url);
 		}
 		
 		

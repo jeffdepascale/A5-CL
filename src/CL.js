@@ -34,8 +34,6 @@ a5.Package("a5.cl")
 			return _initializer;
 		}
 		
-		cls.Override.config = function(){ return _config; }
-		
 		/**
 		 * Returns the current launch state of the application, a value from TODO
 		 */
@@ -45,13 +43,13 @@ a5.Package("a5.cl")
 		* @type String
 		* @default null
 		*/
-		cls.applicationBuild = function(){ return config.applicationBuild; }
+		cls.applicationBuild = function(){ return _config.applicationBuild; }
 		
 		/**
 		* @type  String 
 		* @default an empty string
 		*/
-		cls.appName = function(){ return config.appName; }
+		cls.appName = function(){ return _config.appName; }
 		
 		/**
 		 * Returns a reference to the application package.
@@ -68,7 +66,7 @@ a5.Package("a5.cl")
 		* @type  String
 		* @default 'DEVELOPMENT'
 		*/
-		cls.environment = function(){ return config.environment; }
+		cls.environment = function(){ return _config.environment; }
 		
 		/**
 		 *

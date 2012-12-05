@@ -31,6 +31,8 @@ a5.Package('a5.cl.core')
 			window.location.reload();
 		}
 		
+		this.config = function(){ return _params; }
+		
 		this.initializeCore = function($environment, $clientEnvironment){
 			updateLaunchStatus('APPLICATION_INITIALIZING');
 			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer, [_params.globalUpdateTimerInterval]);
