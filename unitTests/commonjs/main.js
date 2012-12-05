@@ -1,17 +1,12 @@
 require("a5")
 
 a5.Package('com.testpilot111')
-
+	
 	.Extends('a5.cl.CLMain')
-	.Class('Main', function(cls){
+	.Class('Main', function(cls, im){
 		
-		cls.Main = function(app){
-			cls.superclass(this);
-			cls.setConfig({
-				dependencies:[
-					'Server.js'
-				]
-			})
+		cls.Main = function(){
+			cls.superclass(this, arguments);
 		}
 		
 		cls.Override.applicationLaunched = function(){

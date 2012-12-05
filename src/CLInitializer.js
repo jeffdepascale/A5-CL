@@ -8,7 +8,7 @@
             a5.cl.RegisterInitializer(this);
         }
 
-        cls.initialize = function (callback) {
+        cls.initialize = function (props, callback) {
             throw "Classes extending CLInitializer must override initialize method without calling super.";
         }
 		

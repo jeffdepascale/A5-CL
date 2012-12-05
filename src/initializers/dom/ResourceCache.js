@@ -1,4 +1,5 @@
 a5.Package('a5.cl.initializers.dom')
+	.Import('a5.cl.CLEvent')
 	.Extends('a5.cl.CLBase')
 	.Mix('a5.cl.mixins.DataStore')
 	.Static(function(ResourceCache){
@@ -32,7 +33,7 @@ a5.Package('a5.cl.initializers.dom')
 		
 		this.ResourceCache = function(){
 			this.superclass(this);
-			a5.cl.CreateCallback(eAppIntializingHandler);
+			self.cl().addOneTimeEventListener(im.CLEvent.CORE_LOADED, eAppIntializingHandler);
 			resources = {};
 		}
 		

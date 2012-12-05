@@ -8,6 +8,18 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.DOM = function(){
 			cls.superclass(this);
+			cls.configDefaults({
+				cacheBreak:false,
+				cacheTypes:[],
+				clientEnvironment:null,
+				clientEnvironmentOverrides:false,
+				mobileWidthThreshold:768,		
+				silentIncludes:false,
+				staggerDependencies:true,
+				titleDelimiter:': ',
+				trapErrors:false,
+				xhrDependencies:false
+			});
 		}
 		
 		cls.Override.initializePlugin = function(){

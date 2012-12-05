@@ -7,7 +7,8 @@ a5.Package('a5.cl.initializers.nodejs')
     .Class('NodeJSInitializer', function (cls, im) {
 		
 		var root,
-			path;
+			path,
+			dependencies;
 		
         cls.NodeJSInitializer = function () {
             cls.superclass(this);
@@ -23,18 +24,62 @@ a5.Package('a5.cl.initializers.nodejs')
 		
 		cls.Override.load = function(arr, complete, progress){
 			for (var i = 0, l = arr.length; i < l; i++) {
-				require(root + "/" + arr[i]);
+				require((arr[i].indexOf(root + "/") != -1 ? root + "/":"") + arr[i]);
 			}
 			complete();
 		}
 
-        cls.Override.initialize = function (callback) {
-            callback();
+        cls.Override.initialize = function (props, callback) {
+            gatherDependencies(callback);
         }
+		
+		cls.Override.applicationInitialized = function(inst){
+			for(var i = 0, l = dependencies.length; i<l; i++)
+				inst.config().dependencies.push(dependencies[i]);
+		}
 		
         var requireHandler = function (namespace) {
             return require(namespace);
         }
+		
+		var gatherDependencies = function(complete){
+			var fs = require('fs'), walk = function(dir, done){
+				var results = [];
+				fs.readdir(dir, function(err, list){
+					if (err) 
+						return done(err);
+					var i = 0;
+					(function next(){
+						var file = list[i++];
+						if (!file) 
+							return done(null, results);
+						file = dir + '/' + file;
+						fs.stat(file, function(err, stat){
+							if (stat && stat.isDirectory()) {
+								walk(file, function(err, res){
+									results = results.concat(res);
+									next();
+								});
+							}
+							else {
+								if(file.charAt(0) !== "_" && file.indexOf(".js") === file.length - 3)
+									results.push(file);
+								next();
+							}
+						});
+					})();
+				});
+			};
+			
+			walk(root + "src", function(err, results){
+				if (err) 
+					throw err;
+				else {
+					dependencies = results;
+					complete();
+				}
+			})
+		}
 });
 
 a5.Create(a5.cl.initializers.nodejs.NodeJSInitializer);

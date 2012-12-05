@@ -90,10 +90,6 @@ a5.Package('a5.cl.core')
 			self.cl().dispatchEvent(im.CLEvent.AUTO_INSTANTIATION_COMPLETE);
 		}
 		
-		this.createConfig = function(userConfig){
-			return userConfig ? a5.cl.core.Utils.mergeObject(userConfig, a5.cl.CLConfig):a5.cl.CLConfig;
-		}
-		
 		var getClassNamespace = function(type, clsName){							   
 			return a5.GetNamespace(applicationPackage + '.' + type.toLowerCase() + 's.' + clsName + (type == 'domain' ? '':(type.substr(0, 1).toUpperCase() + type.substr(1))));
 		}

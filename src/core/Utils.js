@@ -2,6 +2,15 @@
 a5.Package('a5.cl.core')
 	.Static('Utils', function(Utils){
 		
+		Utils.isAbsolutePath = function(url){
+			return (url.indexOf('://') !== -1 || url.substr(0, 1) == '/');
+		}
+		
+		Utils.makeAbsolutePath = function(url){
+			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.instance().initializer().environmentManager().appPath() + url);
+		}
+		
+		
 		Utils.trim = function(str){
 			if(!str) return str;
 			return str.replace(/(^\s+)|(\s+$)/g, "").replace(/\s{2,}/, " ");

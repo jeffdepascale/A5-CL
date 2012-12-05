@@ -22,7 +22,6 @@ a5.SetNamespace('a5.cl', true, function(){
 
              if (a5.cl.CLMain._extenderRef.length === 0) {
                  var str = 'A5 CL requires a class that extends a5.cl.CLMain.';
-                 a5.cl.core.Utils.generateSystemHTMLTemplate(500, str, true);
                  throw str;
              } else {
                  if (typeof props === 'function') {
@@ -34,7 +33,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  if (callback && typeof callback === 'function')
                      CreateCallback(callback);
                  var initializeComplete = function () {
-                     a5.Create(a5.cl.CL, [props, initializer]);
+                     a5.Create(a5.cl.CL, [props || {}, initializer]);
                     var inst = a5.cl.instance();
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
@@ -45,7 +44,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  }
 
                  if (initializer !== null)
-                     initializer.initialize(initializeComplete);
+                     initializer.initialize(props, initializeComplete);
                  else
                      initializeComplete();
 

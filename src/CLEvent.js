@@ -34,6 +34,8 @@ a5.Package('a5.cl')
 		 * */
 		CLEvent.APPLICATION_INITIALIZING = "applicationInitializing";
 		
+		
+		CLEvent.CORE_LOADED = "coreLoaded";
 		/**
 		 * @event
 		 * @param {Number} count

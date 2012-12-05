@@ -2518,7 +2518,6 @@ a5.SetNamespace('a5.cl', true, function(){
 
              if (a5.cl.CLMain._extenderRef.length === 0) {
                  var str = 'A5 CL requires a class that extends a5.cl.CLMain.';
-                 a5.cl.core.Utils.generateSystemHTMLTemplate(500, str, true);
                  throw str;
              } else {
                  if (typeof props === 'function') {
@@ -2530,7 +2529,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  if (callback && typeof callback === 'function')
                      CreateCallback(callback);
                  var initializeComplete = function () {
-                     a5.Create(a5.cl.CL, [props, initializer]);
+                     a5.Create(a5.cl.CL, [props || {}, initializer]);
                     var inst = a5.cl.instance();
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
@@ -2541,7 +2540,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  }
 
                  if (initializer !== null)
-                     initializer.initialize(initializeComplete);
+                     initializer.initialize(props, initializeComplete);
                  else
                      initializeComplete();
 
@@ -2676,7 +2675,7 @@ a5.Package('a5.cl')
             a5.cl.RegisterInitializer(this);
         }
 
-        cls.initialize = function (callback) {
+        cls.initialize = function (props, callback) {
             throw "Classes extending CLInitializer must override initialize method without calling super.";
         }
 		
@@ -2740,6 +2739,8 @@ a5.Package('a5.cl')
 		 * */
 		CLEvent.APPLICATION_INITIALIZING = "applicationInitializing";
 		
+		
+		CLEvent.CORE_LOADED = "coreLoaded";
 		/**
 		 * @event
 		 * @param {Number} count
@@ -3144,307 +3145,23 @@ a5.Package('a5.cl.core')
 			self.cl().dispatchEvent(im.CLEvent.AUTO_INSTANTIATION_COMPLETE);
 		}
 		
-		this.createConfig = function(userConfig){
-			return userConfig ? a5.cl.core.Utils.mergeObject(userConfig, a5.cl.CLConfig):a5.cl.CLConfig;
-		}
-		
 		var getClassNamespace = function(type, clsName){							   
 			return a5.GetNamespace(applicationPackage + '.' + type.toLowerCase() + 's.' + clsName + (type == 'domain' ? '':(type.substr(0, 1).toUpperCase() + type.substr(1))));
 		}
 })
 
 
-/**
- * @class Sets properties for the application.
- * @name a5.cl.CLConfig
- */
-a5.SetNamespace("a5.cl.CLConfig", {	
-	
-	/**
-	 * @field
-	 * @type  Boolean 
-	 * @name a5.cl.CLConfig#allowUntestedPlugins
-	 * @default false
-	 */
-	allowUntestedPlugins:false,
-	
-	/**
-	 * @type String
-	 * @default null
-	 */
-	applicationBuild:null,
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#appName
-	 * @default an empty string
-	 */
-	appName:'',
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#applicationPackage
-	 * @default an empty string
-	 */
-	applicationPackage:'',
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#applicationViewPath
-	 * @default 'views/'
-	 */
-	applicationViewPath:'views/',
-	
-	
-	breakOnDestroyedMethods:false,
-	
-	/**
-	 * @type Boolean
-	 * @default false
-	 */
-	cacheBreak:false,
-	
-	/**
-	 * @field
-	 * @type  Boolean 
-	 * @name a5.cl.CLConfig#cacheEnabled
-	 * @default true
-	 */
-	cacheEnabled:true,
-	
-	/**
-	 * @field
-	 * @type Array
-	 * @name a5.cl.CLConfig#cacheTypes
-	 */
-	cacheTypes:[],
-	
-	/**
-	 * @field
-	 * @type  String
-	 * @name a5.cl.CLConfig#clientEnvironment
-	 * @see a5.cl.MVC#clientEnvironment
-	 * @default null
-	 */
-	clientEnvironment:null,
-	
-	/**
-	 * @field
-	 * @type  Object 
-	 * @name a5.cl.CLConfig#clientEnvironments
-	 * @default an empty object
-	 */
-	clientEnvironments: {},
-	
-	/**
-	 * Specifies whether browser dimension changes are allowed to trigger redraws to different client environment settings. 
-	 * @field
-	 * @type Boolean
-	 * @name a5.cl.CLConfig#environmentOverrides
-	 * @default false
-	 */
-	clientEnvironmentOverrides:false,
-	
-	/**
-	 * Specifies a default view container target for render calls. Defaults to the root window of the application. 
-	 * @field
-	 * @type a5.cl.CLViewContainer
-	 * @name a5.cl.CLConfig#defaultRenderTarget
-	 * @default null
-	 */
-	defaultRenderTarget:null,
-	
-	/**
-	 * @field
-	 * @type  Array 
-	 * @name a5.cl.CLConfig#dependencies
-	 * @default an empty array
-	 */
-	dependencies: [],
-	
-	/**
-	 * @field
-	 * @type  String
-	 * @name a5.cl.CLConfig#environment
-	 * @see a5.cl.MVC#environment
-	 * @default 'DEVELOPMENT'
-	 */
-	environment:'DEVELOPMENT',
-	
-	/**
-	 * @field
-	 * @type  Object 
-	 * @name a5.cl.CLConfig#environments
-	 * @default an empty object
-	 */
-	environments: {},
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#faviconPath
-	 * @default an empty string
-	 */
-	faviconPath:'',
-	
-	/**
-	 * @field
-	 * @type  Boolean 
-	 * @name a5.cl.CLConfig#forceIE7
-	 * @default true
-	 */
-	forceIE7:true,
-	
-	/**
-	 * @field
-	 * @type Number
-	 * @name a5.cl.CLConfig#globalUpdateTimerInterval
-	 * @default 10
-	 */
-	globalUpdateTimerInterval:10,
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#hashDelimiter
-	 * @default '#!'
-	 */
-	hashDelimiter:'#!',
-	
-	/**
-	 * Specifies a browser width value for triggering mobile vs desktop (or tablet) rendering. 
-	 * @field
-	 * @type Number
-	 * @name a5.cl.CLConfig#mobileWidthThreshold
-	 * @default 768
-	 */
-	mobileWidthThreshold:768,
-	
-	/**
-	 * @field
-	 * @type Boolean
-	 * @name a5.cl.CLConfig#persistORMData
-	 * @default false
-	 */
-	persistORMData:false,
-
-	plugins:{},
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#requestDefaultContentType
-	 * @default 'application/json'
-	 */
-	requestDefaultContentType:'application/json',
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#requestDefaultMethod
-	 * @default 'POST'
-	 */
-	requestDefaultMethod:'POST',
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#rootController
-	 * @default null
-	 */
-	rootController:null,
-	
-	/**
-	 * @field
-	 * @type  XML 
-	 * @name a5.cl.CLConfig#rootViewDef
-	 * @default null
-	 */
-	rootViewDef:null,
-	
-	/**
-	 * @field
-	 * @type  String 
-	 * @name a5.cl.CLConfig#rootWindow
-	 * @default null
-	 */
-	rootWindow:null,
-	
-	/**
-	 * @field
-	 * @type Number
-	 * @name a5.cl.CLConfig#schemaBuild
-	 * @default 0
-	 */
-	schemaBuild:0,
-	
-	/**
-	 * If true, the ASYNC_START and ASYNC_COMPLETE events will not be dispatched by includes.
-	 * @field
-	 * @type Boolean,
-	 * @name a5.cl.CLConfig#silentIncludes
-	 * @default false
-	 */
-	silentIncludes:false,
-	
-	staggerDependencies:true,
-	/**
-	 * Specifies the character delimiter to use when setting the address bar with an append value.
-	 * @field
-	 * @type String
-	 * @name a5.cl.CLConfig#titleDelimiter
-	 * @default ': '
-	 */
-	titleDelimiter:': ',
-	
-	/**
-	 * @field
-	 * @type Boolean
-	 * @name a5.cl.CLConfig#trapErrors
-	 * @default false
-	 */
-	trapErrors:false,
-	
-	/**
-	 * @field
-	 * @type  Array 
-	 * @name a5.cl.CLConfig#viewDependencies
-	 * @default an empty array
-	 */
-	viewDependencies:[],
-	
-	/**
-	 * @field
-	 * @type String
-	 * @name a5.cl.CLConfig#workersPath
-	 * @default null
-	 */
-	workersPath:null,
-	
-	/**
-	 * @field
-	 * @type Array
-	 * @name a5.cl.CLConfig#workersIncludes
-	 * @default an empty array
-	 */
-	workersIncludes:[],
-	
-	/**
-	 * @field
-	 * @type Boolean
-	 * @name a5.cl.CLConfig#xhrDependencies
-	 * @default false
-	 */
-	xhrDependencies:false
-});
-
-
-
 a5.Package('a5.cl.core')
 	.Static('Utils', function(Utils){
+		
+		Utils.isAbsolutePath = function(url){
+			return (url.indexOf('://') !== -1 || url.substr(0, 1) == '/');
+		}
+		
+		Utils.makeAbsolutePath = function(url){
+			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.instance().initializer().environmentManager().appPath() + url);
+		}
+		
 		
 		Utils.trim = function(str){
 			if(!str) return str;
@@ -4054,9 +3771,9 @@ a5.Package("a5.cl.core")
 			cacheKeys,
 			provider;
 		
-		this.DataCache = function(){
+		this.DataCache = function(cacheEnabled){
 			self.superclass(this); 
-			_enabled = a5.cl.instance().config().cacheEnabled;
+			_enabled = cacheEnabled;
 			cacheKeys = [];
 		}
 		
@@ -4142,9 +3859,9 @@ a5.Package("a5.cl.core")
 		interval,
 		evtInstance = a5.Create(im.CLEvent, [im.CLEvent.GLOBAL_UPDATE_TIMER_TICK]);
 		
-		this.GlobalUpdateTimer = function(){
+		this.GlobalUpdateTimer = function(_interval){
 			self.superclass(this);
-			interval = self.config().globalUpdateTimerInterval;
+			interval = _interval;
 			clInstance = self.cl();
 			evtInstance.shouldRetain(true);
 		}
@@ -4178,15 +3895,17 @@ a5.Package('a5.cl.core')
 	.Class("Core", 'singleton final', function(self, im){
 	
 		var _cache,
-		_requestManager,
-		_globalUpdateTimer,
-		_instantiator,
-		_pluginManager,
-		_launchState;
+			_params,
+			_requestManager,
+			_globalUpdateTimer,
+			_instantiator,
+			_pluginManager,
+			_launchState;
 		
-		this.Core = function($applicationPackage){
+		this.Core = function(params){
 			self.superclass(this); 
-			_instantiator = self.create(a5.cl.core.Instantiator, [$applicationPackage]);
+			_params = params;
+			_instantiator = self.create(a5.cl.core.Instantiator, [params.applicationPackage]);
 		}
 			
 		this.instantiator = function(){ return _instantiator; }			
@@ -4203,10 +3922,11 @@ a5.Package('a5.cl.core')
 		
 		this.initializeCore = function($environment, $clientEnvironment){
 			updateLaunchStatus('APPLICATION_INITIALIZING');
-			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer);
-			_requestManager = self.create(a5.cl.core.RequestManager);
+			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer, [_params.globalUpdateTimerInterval]);
+			_requestManager = self.create(a5.cl.core.RequestManager, [_params.requestDefaultMethod, _params.requestDefaultContentType]);
 			_pluginManager = self.create(a5.cl.core.PluginManager);
-			_cache = self.create(a5.cl.core.DataCache);
+			_cache = self.create(a5.cl.core.DataCache, [_params.cacheEnabled]);
+			updateLaunchStatus('CORE_LOADED');
 			var loadPaths = self.config().dependencies;
 			if(loadPaths.length){
 				if(self.cl().initializer()){
@@ -5060,14 +4780,6 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * Returns a direct reference to parameters passed to the a5.cl.CreateApplication call.
-		 * @returns {Object}
-		 */
-		proto.getCreateParams = function(){
-			return a5.cl.instance()._cl_createParams();
-		}
-		
-		/**
 		 * Must be override as a starting point for the addon. This method is called after all addons have been loaded, but prior to plugins loading.
 		 * It is not necessary to call super on this method when overriding.
 		 */
@@ -5117,86 +4829,89 @@ a5.Package("a5.cl")
 
 	.Extends('CLBase')
 	.Mix('a5.cl.mixins.Binder')
-	.Class("CL", 'singleton', function(self, im){
+	.Class("CL", 'singleton', function(cls, im){
 	
 		var _params,
-			_config,
 			_initializer,
-			_main,
+			_config,
 			core;
 		
-		this._cl_plugins = {};
-		
-		/**
-		 * 
-		 * @param {Object} params
-		 */
-		this.CL = function(params, initializer){
-			self.superclass(this);
-			_params = {};
-			if(a5.cl.CLMain._extenderRef.length)
-				_main = self.create(a5.cl.CLMain._extenderRef[0], [params]);
-			_params.applicationPackage = _main.classPackage();
+		cls._cl_plugins = {};
+
+		cls.CL = function(params, initializer){
+			cls.superclass(this);
+			var main = cls.create(a5.cl.CLMain._extenderRef[0], [params]);
+			_params = main._cl_params();
 			_initializer = initializer;
-			core = self.create(a5.cl.core.Core, [_params.applicationPackage]);
-			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), _params);
-			_config = core.instantiator().createConfig(_config);
-			if(_config.breakOnDestroyedMethods == true){
-				a5._a5_destroyedObjFunc = function(){ 
-					//debugger; 
-				}
+			core = cls.create(a5.cl.core.Core, [_params]);
+			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
+			if (_config.breakOnDestroyedMethods == true) {
+				a5._a5_destroyedObjFunc = Function('debugger;');
 			}
 		}
 		
-		this._cl_launch = function(){
+		cls._cl_launch = function(){
 			core.initializeCore((_params.environment || null), (_params.clientEnvironment || null));
 		}
 		
-		this.initializer = function(){
+		cls.initializer = function(){
 			return _initializer;
 		}
+		
+		cls.Override.config = function(){ return _config; }
 		
 		/**
 		 * Returns the current launch state of the application, a value from TODO
 		 */
-		this.launchState = function(){ return core.launchState(); }
+		cls.launchState = function(){ return core.launchState(); }
+		
+		/**
+		* @type String
+		* @default null
+		*/
+		cls.applicationBuild = function(){ return config.applicationBuild; }
+		
+		/**
+		* @type  String 
+		* @default an empty string
+		*/
+		cls.appName = function(){ return config.appName; }
 		
 		/**
 		 * Returns a reference to the application package.
 		 * @param {Boolean} [returnString=false] If true is passed, returns the string value of the namespace of the application package.
 		 */
-		this.applicationPackage = function(){ return core.instantiator().applicationPackage.apply(this, arguments); };
+		cls.applicationPackage = function(){ return core.instantiator().applicationPackage.apply(cls, arguments); };
 		
 		/**
 		 *
 		 */
-		this.Override.appParams = function(){	return a5.cl.CLMain._cl_storedCfgs.appParams; }
-
+		cls.Override.appParams = function(){	return a5.cl.CLMain._cl_storedCfgs.appParams; }
+		
 		/**
-		 *
-		 */
-		this.Override.config = function(){		return _config; }		
+		* @type  String
+		* @default 'DEVELOPMENT'
+		*/
+		cls.environment = function(){ return config.environment; }
 		
 		/**
 		 *
 		 */
-		this.Override.plugins = function(){ return this._cl_plugins; }
+		cls.Override.plugins = function(){ return cls._cl_plugins; }
 		
 		/**
 		 * Restarts the application.
 		 */
-		this.relaunch = function(){ core.relaunch(); }
+		cls.relaunch = function(){ core.relaunch(); }
 		
-		this._core = function(){		return core; }
+		cls._core = function(){		return core; }
 		
-		this.asyncRunning = function(){ return core.requestManager().asyncRunning(); }
+		cls.asyncRunning = function(){ return core.requestManager().asyncRunning(); }
 		
-		this._cl_createParams = function(){ return _params; }
-		
-		this.Override.eListenersChange = function(e){
+		cls.Override.eListenersChange = function(e){
 			var ev = a5.cl.CLEvent.GLOBAL_UPDATE_TIMER_TICK;
 			if(e.type === ev){
-				if(this.getTotalListeners(ev) > 0)
+				if(cls.getTotalListeners(ev) > 0)
 					core.globalUpdateTimer().startTimer();
 				else
 					core.globalUpdateTimer().stopTimer();
@@ -5210,19 +4925,38 @@ a5.Package('a5.cl')
 
 	.Extends('CLBase')
 	.Static(function(CLMain){
-		CLMain._cl_storedCfgs = {config:[], appParams:{}, pluginConfigs:[]};
+		CLMain._cl_storedCfgs = {appParams:{}, pluginConfigs:[]};
 	})
 	.Prototype('CLMain', 'abstract', function(proto, im, CLMain){
+		
+		var configDefaults={
+			allowUntestedPlugins:false,
+			applicationBuild:null,
+			appName:'',		
+			breakOnDestroyedMethods:false,
+			cacheEnabled:true,
+			dependencies:[],
+			environment:'DEVELOPMENT',
+			globalUpdateTimerInterval:10,
+			requestDefaultContentType:'application/json',
+			requestDefaultMethod:'POST'
+		},
+		_params;
 		
 		/**
 		 * @param {Object} [params=null] An optional object of parameters to pass into the application instance. Must be passed as a parameter to a5.cl.CreateApplication.
 		 */
-		proto.CLMain = function(){
+		proto.CLMain = function(params){
 			proto.superclass(this);
 			if(CLMain._extenderRef.length > 1)
 				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid class "' + this.namespace() + '", a5.cl.CLMain must only be extended by one subclass.']))
 			if(this.getStatic().instanceCount() > 1)
 				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid duplicate instance of a5.cl.CLMain subclass "' + this.getStatic().namespace() + '"']));
+			for (var prop in configDefaults)
+				if(params[prop] === undefined)
+					params[prop] = configDefaults[prop];
+			_params = params;
+			_params.applicationPackage = this.classPackage();
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_RELAUNCH, this.applicationWillRelaunch);
 			proto.cl().addEventListener(im.CLEvent.ONLINE_STATUS_CHANGE, this.onlineStatusChanged);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_CLOSED, this.applicationClosed);
@@ -5233,17 +4967,31 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
 		}
 		
-		/**
-		 * 
-		 * @param {Object} obj
-		 */
-		proto.setAppParams = function(obj){ CLMain._cl_storedCfgs.appParams = obj; }
+		proto.allowUntestedPlugins = function(val){ _params.allowUntestedPlugins = val; }
+		
+		proto.appName = function(val){ _params.appName = val; }
+		
+		proto.breakOnDestroyedMethods = function(val){ _params.breakOnDestroyedMethods = val; }
+		
+		proto.cacheEnabled = function(val){ _params.cacheEnabled = val; }
+		
+		proto.dependencies = function(val){ _params.dependencies = val; }
+		
+		proto.environment = function(val){ _params.environment = val; }
+		
+		proto.globalUpdateTimerInterval = function(val){ _params.globalUpdateTimerInterval = val; }
+		
+		proto.requestDefaultContentType = function(val){ _params.requestDefaultContentType = val; }
+		
+		proto.requestDefaultMethod = function(val){ _params.requestDefaultMethod = val; }
+		
+		proto._cl_params = function(){ return _params; }
 		
 		/**
 		 * 
 		 * @param {Object} obj
 		 */
-		proto.setConfig = function(obj){ CLMain._cl_storedCfgs.config = obj; }
+		proto.setAppParams = function(obj){ CLMain._cl_storedCfgs.appParams = obj; }
 		
 		/**
 		 * 
@@ -5598,6 +5346,7 @@ a5.Package('a5.cl.initializers.dom')
 })
 
 a5.Package('a5.cl.initializers.dom')
+	.Import('a5.cl.CLEvent')
 	.Extends('a5.cl.CLBase')
 	.Mix('a5.cl.mixins.DataStore')
 	.Static(function(ResourceCache){
@@ -5631,7 +5380,7 @@ a5.Package('a5.cl.initializers.dom')
 		
 		this.ResourceCache = function(){
 			this.superclass(this);
-			a5.cl.CreateCallback(eAppIntializingHandler);
+			self.cl().addOneTimeEventListener(im.CLEvent.CORE_LOADED, eAppIntializingHandler);
 			resources = {};
 		}
 		
@@ -6031,7 +5780,6 @@ a5.Package('a5.cl.initializers.dom')
 
         cls.DOMInitializer = function () {
             cls.superclass(this);
-			resourceCache = cls.create(im.ResourceCache);
         }
 		
 		cls.environmentManager = function(){
@@ -6046,13 +5794,13 @@ a5.Package('a5.cl.initializers.dom')
 			return resourceCache.load(arr, complete, progress);
 		}
 
-        cls.Override.initialize = function (callback) {
+        cls.Override.initialize = function (props, callback) {
             var initialized = false,
 
             onDomReady = function () {
                 if (!initialized) {
                     initialized = true;
-                    callback();
+					callback();
                 }
             },
 
@@ -6079,6 +5827,7 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.Override.applicationInitialized = function(inst){
 			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
+			resourceCache = cls.create(im.ResourceCache);
 			envManager = cls.create(im.EnvManager, [inst.config().environment, inst.config().clientEnvironment]);
 		}
 		
@@ -6231,6 +5980,18 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.DOM = function(){
 			cls.superclass(this);
+			cls.configDefaults({
+				cacheBreak:false,
+				cacheTypes:[],
+				clientEnvironment:null,
+				clientEnvironmentOverrides:false,
+				mobileWidthThreshold:768,		
+				silentIncludes:false,
+				staggerDependencies:true,
+				titleDelimiter:': ',
+				trapErrors:false,
+				xhrDependencies:false
+			});
 		}
 		
 		cls.Override.initializePlugin = function(){

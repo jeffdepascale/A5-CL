@@ -1,9 +1,12 @@
 {
     "name": "a5",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "description": "NodeJS implementation of the A5 JavaScript development framework",
     "main": "lib/A5-CL-Node.js",
-    "author": "Jeff dePascale (a5js.com, jeffdepascale.com)",
+	"homepage":"http://a5js.com",
+    "author": {"name":"Jeff dePascale",
+	 			"url":"http://jeffdepascale.com"
+	 		},
     "keywords": ["a5", "framework", "oop", "aop", "object oriented"],
     "repository" : {
         "type": "git",

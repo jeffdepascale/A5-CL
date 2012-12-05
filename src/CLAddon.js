@@ -18,14 +18,6 @@ a5.Package('a5.cl')
 		}
 		
 		/**
-		 * Returns a direct reference to parameters passed to the a5.cl.CreateApplication call.
-		 * @returns {Object}
-		 */
-		proto.getCreateParams = function(){
-			return a5.cl.instance()._cl_createParams();
-		}
-		
-		/**
 		 * Must be override as a starting point for the addon. This method is called after all addons have been loaded, but prior to plugins loading.
 		 * It is not necessary to call super on this method when overriding.
 		 */

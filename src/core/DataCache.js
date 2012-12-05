@@ -45,9 +45,9 @@ a5.Package("a5.cl.core")
 			cacheKeys,
 			provider;
 		
-		this.DataCache = function(){
+		this.DataCache = function(cacheEnabled){
 			self.superclass(this); 
-			_enabled = a5.cl.instance().config().cacheEnabled;
+			_enabled = cacheEnabled;
 			cacheKeys = [];
 		}
 		
