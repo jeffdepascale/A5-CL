@@ -1,3 +1,4 @@
+
 a5.Package('com.testpilot111')
 	.Import('http')
 	.Extends('a5.cl.CLBase')
@@ -8,7 +9,7 @@ a5.Package('com.testpilot111')
 		cls.Server = function(){
 			cls.superclass(this);
 			server = im.http.createServer(serverReady);
-			server.listen(8124, "127.0.0.1");
+			server.listen(process.env.PORT, process.env.IP);
 			console.log('hello world');
 		}
 		
