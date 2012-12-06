@@ -370,7 +370,7 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 				return true;
 		}
 		return false;
-	}
+	},
 	
 	applyClassAttribs = function(cls, attribs){
 		var methods = cls.getMethods(),
@@ -529,7 +529,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		for(prop in obj.Override){
 			if(sc[prop] === undefined && mixinRef[prop] === undefined)
 				return a5.ThrowError(202, null, {prop:prop, namespace:obj.namespace()});
-			if(sc[prop] && sc[prop].Final === true || mixinRef[prop] && mixinRef[prop].Final === true)
+			if(sc[prop] && sc[prop].Final !== undefined && sc[prop].Final === true || mixinRef[prop] && mixinRef[prop].Final !== undefined && mixinRef[prop].Final === true)
 				return a5.ThrowError(203, null, {prop:prop, namespace:obj.namespace()});
 			obj[prop] = obj.Override[prop];
 		}
@@ -919,7 +919,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			if(pkg) 
 				processObj(a5.GetNamespace(pkg, null, true));
 			if (array) {
-				var str, pkg, clsName;
+				var str, pkg, clsName, isWC, dotIndex;
 				for (i = 0, l = array.length; i < l; i++) {
 					str = array[i], isWC = false, dotIndex = str.lastIndexOf('.');
 					if (str.charAt(str.length - 1) == '*') isWC = true;
@@ -1227,7 +1227,7 @@ a5.SetNamespace('a5.core.classProxyObj',{
 					}
 					if (dConst.namespace) {
 						nextRef = dConst.superclass ? dConst.superclass() : null;
-						if (nextRef && nextRef.dealloc !== descenderRef.dealloc) descenderRef.dealloc.call(this);
+						if (nextRef && nextRef.dealloc !== undefined && nextRef.dealloc !== descenderRef.dealloc) descenderRef.dealloc.call(this);
 						descenderRef = nextRef;
 					} else {
 						descenderRef = null;
@@ -2112,7 +2112,7 @@ a5.Package('a5')
 				if(error.message && this.message === "")
 					this.message = error.message;
 			} else if(error !== false){
-				try{ 
+				/*try{ 
 					__undefined__();
 				} catch(e) {
 					if (e.stack) {
@@ -2139,7 +2139,7 @@ a5.Package('a5')
 							} while (context && i <= 50);
 						} catch (e) {}
 					}
-				}
+				}*/
 			}
 		}
 		
@@ -2405,7 +2405,7 @@ a5.Package("a5")
 			e._a5_currentTarget = this;
 			if (this._a5_listeners) {
 				var typeArray = this._a5_getListenerArray(e.type()),
-					i, l, thisListener, validPhase;
+					i, l, thisListener, validPhase, validListener;
 				if (typeArray) {
 					for (i = 0, l = typeArray.length; i < l; i++) {
 						thisListener = typeArray ? typeArray[i] : null;
@@ -2498,11 +2498,12 @@ var a5 = global.a5;
 a5.SetNamespace('a5.cl', true, function(){
 
     var initializer = null,
+		inst,
         createCalled = false,
         createCallbacks = [];
 
-    var instance = function () {
-        return a5.cl.CL.instance();
+    var Instance = function () {
+        return inst;
     },
 
     /**
@@ -2529,8 +2530,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  if (callback && typeof callback === 'function')
                      CreateCallback(callback);
                  var initializeComplete = function () {
-                     a5.Create(a5.cl.CL, [props || {}, initializer]);
-                    var inst = a5.cl.instance();
+                    inst = a5.Create(a5.cl.CL, [props || {}, initializer]);
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
                     createCallbacks = null;
@@ -2565,7 +2565,7 @@ a5.SetNamespace('a5.cl', true, function(){
      }
 
      return {
-         instance:instance,
+         Instance:Instance,
          CreateApplication:CreateApplication,
          RegisterInitializer: RegisterInitializer,
          CreateCallback:CreateCallback
@@ -2596,7 +2596,7 @@ a5.Package('a5.cl')
 		 * @return {a5.cl.CL}
 		 */
 		proto.cl = function(){
-			return a5.cl.instance();
+			return a5.cl.Instance();
 		}
 		
 		/**
@@ -2636,14 +2636,6 @@ a5.Package('a5.cl')
 		
 		proto.Override.throwError = function(error){
 			proto.superclass().throwError(error, a5.cl.CLError);
-		}
-		
-		/**
-		 * Returns a reference to the configuration object for the A5 CL application instance.
-		 * @return {a5.cl.CLConfig}
-		 */
-		proto.config = function(){
-			return this.cl().config();
 		}
 		
 		/**
@@ -3159,7 +3151,7 @@ a5.Package('a5.cl.core')
 		}
 		
 		Utils.makeAbsolutePath = function(url){
-			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.instance().initializer().environmentManager().appPath() + url);
+			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.Instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.Instance().initializer().environmentManager().appPath() + url);
 		}
 		
 		
@@ -3263,8 +3255,8 @@ a5.Package('a5.cl.core')
 			    val = val.split('.');
 			    return {
 			        major: parseInt(val[0]) || 0,
-			        minor: parseInt(val[1]) || 0,
-			        build: parseInt(val[2]) || 0
+			        minor: val.length > 1 && parseInt(val[1]) || 0,
+			        build: val.length > 2 && parseInt(val[2]) || 0
 			    }
 			}
 			
@@ -3310,12 +3302,12 @@ a5.Package('a5.cl.core')
 			asyncRunning = false,
 			reqCount;
 	
-		this.RequestManager = function(){
+		this.RequestManager = function(defMethod, defType){
 			self.superclass(this, arguments);
 			reqArray = [];
 			reqCount = 0;
-			defaultContentType = self.config().requestDefaultContentType;
-			defaultMethod = self.config().requestDefaultMethod;
+			defaultContentType = defType;
+			defaultMethod = defMethod;
 		}
 		
 		this.asyncRunning = function(){
@@ -3583,7 +3575,7 @@ a5.cl.core.JSON = function(){
 		if (replacer && typeof replacer !== 'function' &&
 		(typeof replacer !== 'object' ||
 		typeof replacer.length !== 'number')) {
-			a5.cl.instance().redirect(500, 'JSON stringify error.');
+			throw 'JSON stringify error.';
 		}
 		return str('', {
 			'': value
@@ -3629,7 +3621,7 @@ a5.cl.core.JSON = function(){
 				'': j
 			}, '') : j;
 		}
-		a5.cl.instance().redirect(500, new SyntaxError('JSON.parse'));
+		throw new SyntaxError('JSON.parse');
 	};
 	
 	var f = function(n){
@@ -3919,6 +3911,8 @@ a5.Package('a5.cl.core')
 			self.cl().dispatchEvent(im.CLEvent.APPLICATION_WILL_RELAUNCH);
 			window.location.reload();
 		}
+		
+		this.config = function(){ return _params; }
 		
 		this.initializeCore = function($environment, $clientEnvironment){
 			updateLaunchStatus('APPLICATION_INITIALIZING');
@@ -4858,8 +4852,6 @@ a5.Package("a5.cl")
 			return _initializer;
 		}
 		
-		cls.Override.config = function(){ return _config; }
-		
 		/**
 		 * Returns the current launch state of the application, a value from TODO
 		 */
@@ -4869,13 +4861,13 @@ a5.Package("a5.cl")
 		* @type String
 		* @default null
 		*/
-		cls.applicationBuild = function(){ return config.applicationBuild; }
+		cls.applicationBuild = function(){ return _config.applicationBuild; }
 		
 		/**
 		* @type  String 
 		* @default an empty string
 		*/
-		cls.appName = function(){ return config.appName; }
+		cls.appName = function(){ return _config.appName; }
 		
 		/**
 		 * Returns a reference to the application package.
@@ -4892,7 +4884,7 @@ a5.Package("a5.cl")
 		* @type  String
 		* @default 'DEVELOPMENT'
 		*/
-		cls.environment = function(){ return config.environment; }
+		cls.environment = function(){ return _config.environment; }
 		
 		/**
 		 *
@@ -4965,6 +4957,10 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.AUTO_INSTANTIATION_COMPLETE, this.autoInstantiationComplete);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_WILL_LAUNCH, this.applicationWillLaunch);
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
+		}
+		
+		proto.Override.cl = function(){
+			return a5.cl.CL.instance();
 		}
 		
 		proto.allowUntestedPlugins = function(val){ _params.allowUntestedPlugins = val; }
@@ -5134,11 +5130,14 @@ a5.Package('a5.cl.initializers.dom')
 	
 		var _supportsCanvas,
 		_isOnline,
+		_mobileWidthThreshold,
+		_forceIE7,
 		_clientEnvironment,
 		_clientPlatform,
 		_clientOrientation,
 		_browserVersion,
 		_environment,
+		_trapErrors,
 		_isBB,
 		_isLocal,
 		_appPath,
@@ -5158,22 +5157,19 @@ a5.Package('a5.cl.initializers.dom')
 			_isOnline = true;
 			_supportsCanvas = !!document.createElement('canvas').getContext;
 			_clientOrientation = getOrientation();
-			if($clientEnvironment) _clientEnvironment = $clientEnvironment;
-			else if(self.config().clientEnvironment)_clientEnvironment = self.config().clientEnvironment;
-			else _clientEnvironment = testForClientEnvironment();
-			testClientPlatform();
-			testBrowserVersion();
-			if($environment) _environment = $environment;
-			else _environment = self.config().environment;
-			var envObj = checkConfigProp(_environment, self.config().environments); 
-			if(envObj) a5.cl.core.Utils.mergeObject(envObj, self.config(), true);
-			var cEnvObj = checkConfigProp(_clientEnvironment, self.config().clientEnvironments);
-			if(cEnvObj) a5.cl.core.Utils.mergeObject(cEnvObj, self.config(), true);
+			_environment = $environment;
 			_isLocal = window.location.protocol == 'file:';
 			setAppPath();
 		}
 		
-		this.initialize = function(){
+		this.initialize = function(trapErrors){
+			var pc = self.DOM().pluginConfig();
+			_trapErrors = pc.trapErrors;
+			_mobileWidthThreshold = pc.mobileWidthThreshold;
+			_forceIE7 = pc.forceIE7;
+			_clientEnvironment = testForClientEnvironment();
+			testClientPlatform();
+			testBrowserVersion();
 			setupWindowEvents();
 			try{
 				 document.body.addEventListener('online', update);
@@ -5186,7 +5182,7 @@ a5.Package('a5.cl.initializers.dom')
 				var newVal = navigator.onLine;
 				if(newVal != _isOnline){
 					_isOnline = newVal;
-					a5.cl.instance().dispatchEvent(im.CLEvent.ONLINE_STATUS_CHANGE, {online:self.isOnline()});
+					self.cl().dispatchEvent(im.CLEvent.ONLINE_STATUS_CHANGE, {online:self.isOnline()});
 				}
 			}
 		}
@@ -5198,7 +5194,7 @@ a5.Package('a5.cl.initializers.dom')
 				return 'PHONEGAP';
 			}else {
 				var isMobile = mobileTest(),
-				isTablet = isMobile && screen.width >= self.config().mobileWidthThreshold;
+				isTablet = isMobile && screen.width >= _mobileWidthThreshold;
 				_isBB = window.blackberry != undefined;
 				if(_isBB) isMobile = true;
 				if(isTablet) return 'TABLET';
@@ -5244,47 +5240,11 @@ a5.Package('a5.cl.initializers.dom')
 				return 'UNKNOWN';
 		}
 		
-		var checkConfigProp = function(checkProp, obj){
-			var foundProps = [], prop, propArray, isPositiveCase, envProp, i, l, canPush, isValidForNeg, retProp = null;
-			for(prop in obj){
-				isPositiveCase = true;
-				envProp = prop;
-				if (envProp.charAt(0) === '_') {
-					isPositiveCase = false;
-					envProp = envProp.substr(1);
-				}
-				propArray = envProp.split('_');
-				canPush = false;
-				isValidForNeg = true;
-				for(i = 0, l=propArray.length; i<l; i++){
-					if(isPositiveCase){
-						 if (propArray[i] === checkProp) {
-						 	canPush = true;
-							break;
-						 }
-					} else {
-						if(propArray[i] === checkProp)
-							isValidForNeg = false;
-							break;
-					}
-				}
-				if((isPositiveCase && canPush) ||
-				   (!isPositiveCase && isValidForNeg))
-						foundProps.push(obj[prop]);
-			}
-			if(foundProps.length)
-				retProp = foundProps[0];
-			if(foundProps.length >1)
-				for(i = 1, l=foundProps.length; i<l; i++)
-					a5.cl.core.Utils.mergeObject(foundProps[i], retProp, true);
-			return retProp;
-		}
-		
 		var testBrowserVersion = function(){
 			_browserVersion = 0;
 			if (document.body.style.scrollbar3dLightColor!=undefined) {
 				if (document.body.style.opacity!=undefined) { _browserVersion = 9; }
-				else if (!self.config().forceIE7 && document.body.style.msBlockProgression!=undefined) { _browserVersion = 8; }
+				else if (!_forceIE7 && document.body.style.msBlockProgression!=undefined) { _browserVersion = 8; }
 				else if (document.body.style.msInterpolationMode!=undefined) { _browserVersion = 7; }
 				else if (document.body.style.textOverflow!=undefined) { _browserVersion = 6; }
 				else {_browserVersion = 5.5; }
@@ -5301,16 +5261,12 @@ a5.Package('a5.cl.initializers.dom')
 		
 		var setupWindowEvents = function(){
 			window.onbeforeunload = function(){
-				/* need close interceptor in mvc
-				var val = self.cl().application().applicationWillClose();
-				if (typeof val == 'string') return val;
-				*/
 				self.cl().dispatchEvent(im.CLEvent.APPLICATION_WILL_CLOSE);
 			}
 			window.onunload = function(){
 				self.cl().dispatchEvent(im.CLEvent.APPLICATION_CLOSED);
 			}
-			if (self.config().trapErrors === true){
+			if (_trapErrors === true){
 				window.onerror = function(e, url, line){
 					e = e || window.error;
 					if(e === 'Script error.')
@@ -5362,7 +5318,11 @@ a5.Package('a5.cl.initializers.dom')
 			
 		var resources,
 			dataCache,
+			shouldCacheBreak,
+			staggerDependencies,
+			xhrDependencies,
 			shouldUseCache,
+			silentIncludes,
 			requestManager,
 			cacheBreakValue,
 			cacheTypes = [
@@ -5378,24 +5338,28 @@ a5.Package('a5.cl.initializers.dom')
 			];
 		
 		
-		this.ResourceCache = function(){
+		this.ResourceCache = function(_cacheTypes, _cacheBreak, _staggerDependencies, _xhrDependencies, _silentIncludes){
 			this.superclass(this);
+			cacheTypes = cacheTypes.concat(_cacheTypes);
+			shouldCacheBreak = _cacheBreak;
+			staggerDependencies = _staggerDependencies;
+			xhrDependencies = _xhrDependencies;
+			silentIncludes = _silentIncludes;
 			self.cl().addOneTimeEventListener(im.CLEvent.CORE_LOADED, eAppIntializingHandler);
 			resources = {};
 		}
 		
 		var eAppIntializingHandler = function(){
 			requestManager = a5.cl.core.RequestManager.instance();
-			cacheTypes = cacheTypes.concat(self.config().cacheTypes);
-			if(self.config().cacheBreak && typeof self.config().applicationBuild === 'string'){
-				var trimVal = im.Utils.trim(self.config().applicationBuild);
+			if(shouldCacheBreak && typeof self.cl().applicationBuild() === 'string'){
+				var trimVal = im.Utils.trim(self.cl().applicationBuild());
 				if(trimVal !== "")
 					cacheBreakValue = trimVal;
 			}
 		}
 		
 		this.initStorageRules = function(){
-			var manifestBuild = this.cl().manifestBuild(),
+			var manifestBuild = this.DOM().manifestBuild(),
 				storedBuild = this.getValue('build') || -1;
 			shouldUseCache = (this.cl().isOfflineCapable() && this.cl().environment() === 'PRODUCTION');
 			if(manifestBuild && manifestBuild > storedBuild) this.clearScopeValues();
@@ -5421,7 +5385,8 @@ a5.Package('a5.cl.initializers.dom')
 			a5._a5_delayProtoCreation(true);
 			totalItems = urlArray.length;
 			percentPer = 100 / totalItems;
-			if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {	
+			
+			if (staggerDependencies || xhrDependencies || asXHR) {	
 				fetchURL(urlArray[loadCount]);
 			} else {
 				for(var i = 0, l = urlArray.length; i<l; i++)
@@ -5462,7 +5427,7 @@ a5.Package('a5.cl.initializers.dom')
 					});
 					if(totalItems == 1) retValue = data;
 					else retValue.push(data);
-					if (self.config().staggerDependencies || self.config().xhrDependencies || asXHR) {
+					if (staggerDependencies || xhrDependencies || asXHR) {
 						if (loadCount == totalItems) {
 							completeLoad(retValue);
 						} else {
@@ -5511,7 +5476,7 @@ a5.Package('a5.cl.initializers.dom')
 							imgObj.onload = clearImage;
 							imgObj.onerror = imgError;
 							imgObj.src = data;
-						} else if (type === 'js' && self.config().xhrDependencies === false && asXHR == false){
+						} else if (type === 'js' && xhrDependencies === false && asXHR == false){
 							var insertElem = function(){
 								head.insertBefore(include, head.firstChild);
 							}
@@ -5553,7 +5518,7 @@ a5.Package('a5.cl.initializers.dom')
 									});
 								}
 							}
-							reqObj.silent = self.config().silentIncludes === true;
+							reqObj.silent = silentIncludes === true;
 							requestManager.makeRequest(reqObj)
 						}
 					} else {
@@ -5776,6 +5741,7 @@ a5.Package('a5.cl.initializers.dom')
     .Class('DOMInitializer', function (cls, im) {
 
 		var resourceCache,
+			props,
 			envManager;
 
         cls.DOMInitializer = function () {
@@ -5794,8 +5760,9 @@ a5.Package('a5.cl.initializers.dom')
 			return resourceCache.load(arr, complete, progress);
 		}
 
-        cls.Override.initialize = function (props, callback) {
-            var initialized = false,
+        cls.Override.initialize = function (_props, callback) {
+            props = _props;
+			var initialized = false,
 
             onDomReady = function () {
                 if (!initialized) {
@@ -5827,8 +5794,12 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.Override.applicationInitialized = function(inst){
 			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
-			resourceCache = cls.create(im.ResourceCache);
-			envManager = cls.create(im.EnvManager, [inst.config().environment, inst.config().clientEnvironment]);
+			resourceCache = cls.create(im.ResourceCache, [props.cacheTypes || [], 
+									props.cacheBreak || false, 
+									props.staggerDependencies || true,
+									props.xhrDependencies || false,
+									props.silentIncludes || false]);
+			envManager = cls.create(im.EnvManager, [inst.environment()]);
 		}
 		
 		var eAppPreparedHandler = function(){
@@ -5860,7 +5831,7 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		Utils.makeAbsolutePath = function(url){
-			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.instance().initializer().environmentManager().appPath() + url);
+			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.Instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.Instance().initializer().environmentManager().appPath() + url);
 		}
 		
 		Utils.generateSystemHTMLTemplate = function(type, str, replBody){
@@ -5980,17 +5951,13 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.DOM = function(){
 			cls.superclass(this);
-			cls.configDefaults({
-				cacheBreak:false,
-				cacheTypes:[],
+			cls.configDefaults({				
 				clientEnvironment:null,
+				forceIE7:true,
 				clientEnvironmentOverrides:false,
 				mobileWidthThreshold:768,		
-				silentIncludes:false,
-				staggerDependencies:true,
 				titleDelimiter:': ',
-				trapErrors:false,
-				xhrDependencies:false
+				trapErrors:false
 			});
 		}
 		

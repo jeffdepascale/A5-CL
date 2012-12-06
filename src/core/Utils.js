@@ -111,8 +111,8 @@ a5.Package('a5.cl.core')
 			    val = val.split('.');
 			    return {
 			        major: parseInt(val[0]) || 0,
-			        minor: parseInt(val[1]) || 0,
-			        build: parseInt(val[2]) || 0
+			        minor: val.length > 1 && parseInt(val[1]) || 0,
+			        build: val.length > 2 && parseInt(val[2]) || 0
 			    }
 			}
 			

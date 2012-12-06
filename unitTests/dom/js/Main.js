@@ -13,6 +13,7 @@ a5.Package('com.testpilot111')
 		}
 		
 		cls.Override.applicationLaunched = function(){
+			throw cls.create(a5.ContractException, ['foo']);
 			console.log('launched');
 		}
 })
