@@ -7,8 +7,7 @@ a5.Package('a5.cl.initializers.nodejs')
     .Class('NodeJSInitializer', function (cls, im) {
 		
 		var root,
-			path,
-			dependencies;
+			path;
 		
         cls.NodeJSInitializer = function () {
             cls.superclass(this);
@@ -30,20 +29,27 @@ a5.Package('a5.cl.initializers.nodejs')
 		}
 
         cls.Override.initialize = function (props, callback) {
-            gatherDependencies(callback);
+            gatherDependencies(function(dependencies){
+				if (dependencies !== null) {
+					if(props.dependencies === undefined)
+						props.dependencies = dependencies;
+					else
+						for (var i = 0, l = dependencies.length; i < l; i++) 
+							props.dependencies.push(dependencies[i]);
+					
+				}
+				callback();
+			});
         }
-		
-		cls.Override.applicationInitialized = function(inst){
-			for(var i = 0, l = dependencies.length; i<l; i++)
-				inst.config().dependencies.push(dependencies[i]);
-		}
 		
         var requireHandler = function (namespace) {
             return require(namespace);
         }
 		
 		var gatherDependencies = function(complete){
-			var fs = require('fs'), walk = function(dir, done){
+			var fs = require('fs'), 
+				path = root + "src",
+				walk = function(dir, done){
 				var results = [];
 				fs.readdir(dir, function(err, list){
 					if (err) 
@@ -71,14 +77,17 @@ a5.Package('a5.cl.initializers.nodejs')
 				});
 			};
 			
-			walk(root + "src", function(err, results){
-				if (err) 
-					throw err;
-				else {
-					dependencies = results;
-					complete();
-				}
-			})
+			if (fs.existsSync(path)) {
+				walk(path, function(err, results){
+					if (err) 
+						throw err;
+					else {
+						complete(results);
+					}
+				})
+			} else {
+				complete(null);
+			}
 		}
 });
 

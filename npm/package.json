@@ -1,8 +1,9 @@
 {
     "name": "a5",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "NodeJS implementation of the A5 JavaScript development framework",
-    "main": "lib/A5-CL-Node.js",
+    "main": "./lib/A5-CL-Node.js",
+	"bin": { "a5": "./lib/CommandLine.js" },
 	"homepage":"http://a5js.com",
     "author": {"name":"Jeff dePascale",
 	 			"url":"http://jeffdepascale.com"
@@ -13,7 +14,7 @@
         "url": "https://github.com/jeffdepascale/A5-CL.git"
     },
     "dependencies": {
-        "xmlhttprequest": "1.5.0"
+        "xmlhttprequest": "1.5.x"
     },
     "engines": { "node": "*" }
 }
