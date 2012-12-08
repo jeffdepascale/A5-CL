@@ -16,7 +16,7 @@ a5.Package('a5.cl.core')
 		this.Core = function(params){
 			self.superclass(this); 
 			_params = params;
-			_instantiator = self.create(a5.cl.core.Instantiator, [params.applicationPackage]);
+			_instantiator = new im.Instantiator(params.applicationPackage);
 		}
 			
 		this.instantiator = function(){ return _instantiator; }			
@@ -35,10 +35,10 @@ a5.Package('a5.cl.core')
 		
 		this.initializeCore = function($environment, $clientEnvironment){
 			updateLaunchStatus('APPLICATION_INITIALIZING');
-			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer, [_params.globalUpdateTimerInterval]);
-			_requestManager = self.create(a5.cl.core.RequestManager, [_params.requestDefaultMethod, _params.requestDefaultContentType]);
-			_pluginManager = self.create(a5.cl.core.PluginManager);
-			_cache = self.create(a5.cl.core.DataCache, [_params.cacheEnabled]);
+			_globalUpdateTimer = new im.GlobalUpdateTimer(_params.globalUpdateTimerInterval);
+			_requestManager = new im.RequestManager(_params.requestDefaultMethod, _params.requestDefaultContentType);
+			_pluginManager = new im.PluginManager();
+			_cache = new im.DataCache(_params.cacheEnabled);
 			updateLaunchStatus('CORE_LOADED');
 			var loadPaths = self.config().dependencies;
 			if(loadPaths.length){

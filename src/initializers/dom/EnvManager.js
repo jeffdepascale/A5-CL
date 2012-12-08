@@ -152,7 +152,7 @@ a5.Package('a5.cl.initializers.dom')
 					if(clErr && e !== "" && e.indexOf(clErr.toString()) !== -1)
 						e = clErr;
 					else
-						e = a5.Create(a5.Error, [e, false]);
+						e = new a5.Error(e, false);
 					if(url) e.url = url;
 					if(line) e.line = line;
 					self.cl().dispatchEvent(im.CLEvent.ERROR_THROWN, e);			

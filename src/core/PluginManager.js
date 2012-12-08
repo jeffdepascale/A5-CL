@@ -80,7 +80,7 @@ a5.Package('a5.cl.core')
 					
 			}
 			a5.cl.PluginConfig = function(){
-				self.throwError(self.create(a5.cl.CLError, ['Invalid call to MVC pluginConfig method: method must be called prior to plugin load.']));
+				throw new a5.cl.CLError('Invalid call to MVC pluginConfig method: method must be called prior to plugin load.');
 			}
 		}
 		

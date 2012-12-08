@@ -16,10 +16,10 @@ a5.Package("a5.cl")
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
-			var main = cls.create(a5.cl.CLMain._extenderRef[0], [params]);
+			var main = new a5.cl.CLMain._extenderRef[0](params);
 			_params = main._cl_params();
 			_initializer = initializer;
-			core = cls.create(a5.cl.core.Core, [_params]);
+			core = new a5.cl.core.Core(_params);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
 			if (_config.breakOnDestroyedMethods == true) {
 				a5._a5_destroyedObjFunc = Function('debugger;');

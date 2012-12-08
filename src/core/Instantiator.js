@@ -42,7 +42,7 @@ a5.Package('a5.cl.core')
 			clsPath = null;
 			if (cls) {
 				var clsInstance;
-				clsInstance = (cls._a5_instance === null) ? this.create(cls) : cls.instance();
+				clsInstance = (cls._a5_instance === null) ? new cls() : cls.instance();
 				clsInstance._cl_setMVCName(clsName);
 				return clsInstance;
 			} else {
@@ -70,7 +70,7 @@ a5.Package('a5.cl.core')
 				if(liveNamespace && typeof liveNamespace == 'object'){
 					for (var prop in liveNamespace) 
 						if (typeof liveNamespace[prop] === 'function') {
-							var instance = self.create(liveNamespace[prop]);
+							var instance = new liveNamespace(prop);
 							liveNamespace[prop]._cl_isFinal = true;
 							if (namespaceArray[i][0] === 'domains') {
 								instance._name = prop;

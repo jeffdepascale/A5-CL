@@ -27,9 +27,9 @@ a5.Package('a5.cl')
 		proto.CLMain = function(params){
 			proto.superclass(this);
 			if(CLMain._extenderRef.length > 1)
-				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid class "' + this.namespace() + '", a5.cl.CLMain must only be extended by one subclass.']))
+				throw new a5.cl.CLError('Invalid class "' + this.namespace() + '", a5.cl.CLMain must only be extended by one subclass.');
 			if(this.getStatic().instanceCount() > 1)
-				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid duplicate instance of a5.cl.CLMain subclass "' + this.getStatic().namespace() + '"']));
+				throw new a5.cl.CLError('Invalid duplicate instance of a5.cl.CLMain subclass "' + this.getStatic().namespace() + '"');
 			for (var prop in configDefaults)
 				if(params[prop] === undefined)
 					params[prop] = configDefaults[prop];

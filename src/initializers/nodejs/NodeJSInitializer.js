@@ -1,6 +1,4 @@
 
-var a5 = this.a5;
-
 a5.Package('a5.cl.initializers.nodejs')
 
     .Extends('a5.cl.CLInitializer')
@@ -11,14 +9,8 @@ a5.Package('a5.cl.initializers.nodejs')
 		
         cls.NodeJSInitializer = function () {
             cls.superclass(this);
-			GLOBAL.a5 = a5;
 			root = process.mainModule.filename.substr(0, process.mainModule.filename.lastIndexOf('/') +1);
-            a5.RegisterNamespaceResolver(requireHandler);
-			try {
-				require('xmlhttprequest');
-			} catch(e){
-				throw "A5 for CommonJS requires 'xmlhttprequest' module";
-			}
+			a5.RegisterNamespaceResolver(requireHandler);
         }
 		
 		cls.Override.load = function(arr, complete, progress){
@@ -91,4 +83,4 @@ a5.Package('a5.cl.initializers.nodejs')
 		}
 });
 
-a5.Create(a5.cl.initializers.nodejs.NodeJSInitializer);
+new a5.cl.initializers.nodejs.NodeJSInitializer();

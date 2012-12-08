@@ -19,7 +19,7 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		cls.Override.initializePlugin = function(){
-			manifestManager = cls.create(im.ManifestManager);
+			manifestManager = new im.ManifestManager();
 		}
 		
 		cls.manifestManager = function(){
@@ -97,4 +97,4 @@ a5.Package('a5.cl.initializers.dom')
 		
 });
 
-a5.Create(a5.cl.initializers.dom.DOMInitializer);
+new a5.cl.initializers.dom.DOMInitializer();

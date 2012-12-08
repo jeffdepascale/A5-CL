@@ -34,7 +34,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  if (callback && typeof callback === 'function')
                      CreateCallback(callback);
                  var initializeComplete = function () {
-                    inst = a5.Create(a5.cl.CL, [props || {}, initializer]);
+                    inst = new a5.cl.CL(props || {}, initializer);
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
                     createCallbacks = null;

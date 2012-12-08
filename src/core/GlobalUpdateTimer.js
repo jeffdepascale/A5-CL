@@ -8,7 +8,7 @@ a5.Package("a5.cl.core")
 		var timer,
 		clInstance,
 		interval,
-		evtInstance = a5.Create(im.CLEvent, [im.CLEvent.GLOBAL_UPDATE_TIMER_TICK]);
+		evtInstance = new im.CLEvent(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK);
 		
 		this.GlobalUpdateTimer = function(_interval){
 			self.superclass(this);

@@ -226,10 +226,11 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 					}
 					if(!isError && (!clsDef.isA5 || !clsDef.doesExtend(a5.Attribute)))
 						isError = true;
-					else if(clsDef.doesExtend(a5.AspectAttribute))
+					else if(!isError && clsDef.doesExtend(a5.AspectAttribute))
 						isAspect = true;
-					if(isError)
+					if (isError) {
 						return a5.ThrowError(303);
+					}
 				} else {
 					if(t !== 'object' || Object.prototype.toString.call(attr) === '[object Array]')
 						return a5.ThrowError(304);
@@ -306,7 +307,7 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 					callback = function(_args){
 						processCB.call(this, _args || args, isAfter, beforeArgs);	
 					}	
-					var argsObj = a5.Create(a5.AspectCallArguments, [attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator, beforeArgs]);
+					var argsObj = new a5.AspectCallArguments(attrClasses[id].props, args, executionScope, proxyFunc, callback, callOriginator, beforeArgs);
 					ret = attrClasses[id].cls.around(argsObj);
 					if(ret === a5.AspectAttribute.NOT_IMPLEMENTED)
 						ret = attrClasses[id].cls[(isAfter ? "after" : "before")](argsObj);
@@ -351,7 +352,7 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 	
 	createAttribs = function(){
 		for(i = 0, l=a5.Attribute._extenderRef.length; i<l; i++)
-			a5.Create(a5.Attribute._extenderRef[i]);
+			new a5.Attribute._extenderRef[i]();
 	},
 	
 	validMName = function(methodName, str){
@@ -427,36 +428,27 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 
 a5.SetNamespace('a5.core.classBuilder', true, function(){
 	
-	var packageQueue = [],
-		delayProtoCreation = false,
-		queuedPrototypes = [],
-		queuedImplementValidations = [],
-		prop,
-	
+	var packageQueue = [], 
+		delayProtoCreation = false, 
+		queuedPrototypes = [], 
+		queuedImplementValidations = [], 
+		prop, 
+		FROM_CREATE = '_a5_constructFromCreate', 
+		BASE_CONSTRUCT = "_a5_baseConstruct", 
+		INTERFACE_TEST = '_a5_interfaceTest',
+		
 	Create = function(classRef, args){
 		var ref, retObj;
-		if (typeof classRef === 'string'){
+		if (typeof classRef === 'string') {
 			ref = a5.GetNamespace(classRef);
-			if (ref === null)
-				return a5.ThrowError(207, null, {className:classRef});
-		} else
+			if (ref === null) 
+				return a5.ThrowError(207, null, { className: classRef });
+		} else 
 			ref = classRef;
-		if (typeof ref !== 'function')
-			return a5.ThrowError(207, null, {className:classRef});
-		if(ref.isInterface())
-			return a5.ThrowError(208, null, {nm:ref.namespace()});
-		try {
-			retObj = new ref();
-		}catch (e){
-			return a5.ThrowError(209, null, {nm:typeof classRef === 'string' ? classRef:(classRef.namespace ? classRef.namespace():''), errorStr:e});
-		}
-		if (ref._a5_clsDef) 
-			processDeclaration(ref._a5_clsDef, retObj, retObj, ref.imports(), ref)
-		//else
-			//TODO: throw error, invalid class declaration
-		retObj._a5_initialize(args);
-		return retObj;
-	},
+		if (typeof ref !== 'function') 
+			return a5.ThrowError(207, null, { className: classRef });
+		return new ref(FROM_CREATE, args);
+	}, 
 	
 	processDeclaration = function(owner, scope, obj, imports, stRef, isProto){
 		if (isProto) {
@@ -480,41 +472,48 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		processMethodChangers(obj);
 		for (prop in obj) {
 			if (prop !== "Attributes" &&
-				({}).hasOwnProperty.call(obj, prop) && 
-				typeof obj[prop] === 'function' && 
-				(stRef._a5_namespace === 'a5.Object' || a5.core.classProxyObj.instance[prop] === undefined)) {
-					if (prop === obj.className()) {
-						obj.constructor._a5_instanceConst = obj[prop];
-						a5.core.reflection.setReflection(stRef, obj, prop, obj.constructor._a5_instanceConst);
-						delete obj[prop];
-					} else {
-						a5.core.reflection.setReflection(stRef, obj, prop);
-					}
+			({}).hasOwnProperty.call(obj, prop) &&
+			typeof obj[prop] === 'function' &&
+			(stRef._a5_namespace === 'a5.Object' || a5.core.classProxyObj.instance[prop] === undefined)) {
+				if (prop === obj.className()) {
+					obj.constructor._a5_instanceConst = obj[prop];
+					a5.core.reflection.setReflection(stRef, obj, prop, obj.constructor._a5_instanceConst);
+					delete obj[prop];
+				}
+				else {
+					a5.core.reflection.setReflection(stRef, obj, prop);
+				}
 			}
 		}
 		delete obj.Final;
 		delete obj.Override;
 		delete scope.Attributes;
 		
-		if(isProto){
+		if (isProto) {
 			delete scope.Properties;
 			delete scope.PrivateProperties;
 		}
-	},
+	}, 
 	
 	processMethodChangers = function(obj){
-		var sc = obj.superclass(),
-			mixinRef = obj.constructor._a5_mixedMethods;
-		if(!sc)
+		var sc = obj.superclass(), mixinRef = obj.constructor._a5_mixedMethods;
+		if (!sc) 
 			sc = {};
-		for(prop in obj){
-			if(obj.hasOwnProperty(prop) && typeof obj[prop] === 'function'){
+		for (prop in obj) {
+			if (obj.hasOwnProperty(prop) && typeof obj[prop] === 'function') {
 				if (prop !== 'Final' && prop !== 'Override' && prop !== 'constructor' && prop !== 'prototype' && prop !== 'dealloc' && prop !== '_a5_initialized') {
-					if (sc[prop] && sc[prop].toString().indexOf('[native code]') === -1){
-						if(sc[prop].Final == true)
-							return a5.ThrowError(201, null, {prop:prop, namespace:obj.namespace()});
-						return a5.ThrowError(200, null, {prop:prop, namespace:obj.namespace()});
-					} else {
+					if (sc[prop] && sc[prop].toString().indexOf('[native code]') === -1) {
+						if (sc[prop].Final == true) 
+							return a5.ThrowError(201, null, {
+								prop: prop,
+								namespace: obj.namespace()
+							});
+						return a5.ThrowError(200, null, {
+							prop: prop,
+							namespace: obj.namespace()
+						});
+					}
+					else {
 						var mixMethod = mixinRef[prop];
 						if (mixinRef[prop] !== undefined && mixMethod !== obj[prop]) {
 							return a5.ThrowError(220, null, {
@@ -526,105 +525,132 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 				}
 			}
 		}
-		for(prop in obj.Override){
-			if(sc[prop] === undefined && mixinRef[prop] === undefined)
-				return a5.ThrowError(202, null, {prop:prop, namespace:obj.namespace()});
-			if(sc[prop] && sc[prop].Final !== undefined && sc[prop].Final === true || mixinRef[prop] && mixinRef[prop].Final !== undefined && mixinRef[prop].Final === true)
-				return a5.ThrowError(203, null, {prop:prop, namespace:obj.namespace()});
+		for (prop in obj.Override) {
+			if (sc[prop] === undefined && mixinRef[prop] === undefined) 
+				return a5.ThrowError(202, null, {
+					prop: prop,
+					namespace: obj.namespace()
+				});
+			if (sc[prop] && sc[prop].Final !== undefined && sc[prop].Final === true || mixinRef[prop] && mixinRef[prop].Final !== undefined && mixinRef[prop].Final === true) 
+				return a5.ThrowError(203, null, {
+					prop: prop,
+					namespace: obj.namespace()
+				});
 			obj[prop] = obj.Override[prop];
 		}
-		for(prop in obj.Final){
+		for (prop in obj.Final) {
 			obj[prop] = obj.Final[prop];
 			obj[prop].Final = true;
 		}
-	},
+	}, 
 	
 	Package = function(pkg){
-		var imports, clsName, 
-		cls, base, type, proto, 
-		implement, mixins,
-		attribs = null,
-		staticMethods = false,
-		isMixin = false, 
-		isInterface = false, 
-		enumDeclaration = false,
-		isProto = false,
-		
-		process = function(){
-			var im = _a5_processImports(imports, pkg),
-			pkgObj = {	pkg:pkg, 
-						imports:imports, 
-						clsName:clsName, 
-						cls:cls, 
-						base:base, 
-						attribs:attribs,
-						type:type, 
-						proto:proto, 
-						implement:implement,
-						mixins:mixins,
-						staticMethods:staticMethods,
-						isInterface:isInterface,
-						isMixin:isMixin,
-						enumDeclaration:enumDeclaration,
-						isProto:isProto},
-			validationResult = a5.core.verifiers.validateClassDependencies(base, im, mixins, implement, isInterface, isMixin);
+		var imports, clsName, cls, base, type, proto, implement, mixins, attribs = null, staticMethods = false, isMixin = false, isInterface = false, enumDeclaration = false, isProto = false, process = function(){
+			var im = _a5_processImports(imports, pkg), pkgObj = {
+				pkg: pkg,
+				imports: imports,
+				clsName: clsName,
+				cls: cls,
+				base: base,
+				attribs: attribs,
+				type: type,
+				proto: proto,
+				implement: implement,
+				mixins: mixins,
+				staticMethods: staticMethods,
+				isInterface: isInterface,
+				isMixin: isMixin,
+				enumDeclaration: enumDeclaration,
+				isProto: isProto
+			}, validationResult = a5.core.verifiers.validateClassDependencies(base, im, mixins, implement, isInterface, isMixin);
 			if (validationResult === true) 
 				processClass(pkgObj);
 			else 
-				packageQueue.push({pkg:pkgObj, reason:validationResult.reason, reasonNM:validationResult.reasonNM});
+				packageQueue.push({
+					pkg: pkgObj,
+					reason: validationResult.reason,
+					reasonNM: validationResult.reasonNM
+				});
 			process = Import = Extends = Implements = Static = Interface = Class = Prototype = Mixin = Mix = Enum = null;
-		},
-		
-		Import = function(){
+		}, Import = function(){
 			imports = Array.prototype.slice.call(arguments);
-			return {Prototype:Prototype, Static:Static, Mixin:Mixin, Mix:Mix, Extends:Extends, Implements:Implements, Interface:Interface,  Class:Class};
-		},
-		
-		Extends = function(str){
+			return {
+				Prototype: Prototype,
+				Static: Static,
+				Mixin: Mixin,
+				Mix: Mix,
+				Extends: Extends,
+				Implements: Implements,
+				Interface: Interface,
+				Class: Class
+			};
+		}, Extends = function(str){
 			base = str;
-			return {Prototype:Prototype, Static:Static, Import:Import, Mix:Mix, Implements:Implements, Interface:Interface, Class:Class};
-		},
-		
-		Mix = function(){
+			return {
+				Prototype: Prototype,
+				Static: Static,
+				Import: Import,
+				Mix: Mix,
+				Implements: Implements,
+				Interface: Interface,
+				Class: Class
+			};
+		}, Mix = function(){
 			mixins = Array.prototype.slice.call(arguments);
-			return {Prototype:Prototype, Static:Static, Extends:Extends, Implements:Implements, Interface:Interface,  Class:Class};
-		},
-		
-		Implements = function(arr){
+			return {
+				Prototype: Prototype,
+				Static: Static,
+				Extends: Extends,
+				Implements: Implements,
+				Interface: Interface,
+				Class: Class
+			};
+		}, Implements = function(arr){
 			implement = Array.prototype.slice.call(arguments);
-			return {Prototype:Prototype, Static:Static, Mix:Mix, Import:Import, Extends:Extends, Class:Class};
-		},
-		
-		Static = function(name, func){
-			if(typeof name === 'string'){
+			return {
+				Prototype: Prototype,
+				Static: Static,
+				Mix: Mix,
+				Import: Import,
+				Extends: Extends,
+				Class: Class
+			};
+		}, Static = function(name, func){
+			if (typeof name === 'string') {
 				clsName = name;
 				staticMethods = func;
 				process();
-			} else {
-				staticMethods = name;
-				return {Prototype:Prototype, Implements:Implements, Mix:Mix, Mixin:Mixin, Import:Import, Extends:Extends, Class:Class};
 			}
-		},
-		
-		Interface = function(str, $cls){
+			else {
+				staticMethods = name;
+				return {
+					Prototype: Prototype,
+					Implements: Implements,
+					Mix: Mix,
+					Mixin: Mixin,
+					Import: Import,
+					Extends: Extends,
+					Class: Class
+				};
+			}
+		}, Interface = function(str, $cls){
 			clsName = str;
 			cls = $cls;
 			isInterface = true;
 			process();
-		},
-		
-		Mixin = function(){
+		}, Mixin = function(){
 			isMixin = true;
 			var args = Array.prototype.slice.call(arguments);
 			clsName = args[0];
-			for(var i = 1, l = args.length; i<l; i++){
-				switch(typeof args[i]){
+			for (var i = 1, l = args.length; i < l; i++) {
+				switch (typeof args[i]) {
 					case 'string':
 						type = args[i];
 						break;
 					case 'object':
 						if (Object.prototype.toString.call(args[i]) === '[object Array]') {
-							if(!attribs) attribs = [];
+							if (!attribs) 
+								attribs = [];
 							attribs.push(args[i]);
 						}
 						break;
@@ -634,25 +660,22 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 				}
 			}
 			process();
-		},
-		
-		Enum = function(name, func){
+		}, Enum = function(name, func){
 			clsName = name;
 			enumDeclaration = func;
-			process();			
-		},
-		
-		Class = function(){
+			process();
+		}, Class = function(){
 			var args = Array.prototype.slice.call(arguments);
 			clsName = args[0];
-			for(var i = 1, l = args.length; i<l; i++){
-				switch(typeof args[i]){
+			for (var i = 1, l = args.length; i < l; i++) {
+				switch (typeof args[i]) {
 					case 'string':
 						type = args[i];
 						break;
 					case 'object':
 						if (Object.prototype.toString.call(args[i]) === '[object Array]') {
-							if(!attribs) attribs = [];
+							if (!attribs) 
+								attribs = [];
 							attribs.push(args[i]);
 						}
 						break;
@@ -662,20 +685,19 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 				}
 			}
 			process();
-		},
-		
-		Prototype = function(){
+		}, Prototype = function(){
 			isProto = true;
 			var args = Array.prototype.slice.call(arguments);
 			clsName = args[0];
-			for(var i = 1, l = args.length; i<l; i++){
-				switch(typeof args[i]){
+			for (var i = 1, l = args.length; i < l; i++) {
+				switch (typeof args[i]) {
 					case 'string':
 						type = args[i];
 						break;
 					case 'object':
 						if (Object.prototype.toString.call(args[i]) === '[object Array]') {
-							if(!attribs) attribs = [];
+							if (!attribs) 
+								attribs = [];
 							attribs.push(args[i]);
 						}
 						break;
@@ -689,7 +711,63 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		
 		a5.SetNamespace(pkg);
 		
-		return {Enum:Enum, Static:Static, Import:Import, Extends:Extends, Mixin:Mixin, Mix:Mix, Implements:Implements, Class:Class, Prototype:Prototype, Interface:Interface};
+		return {
+			Enum: Enum,
+			Static: Static,
+			Import: Import,
+			Extends: Extends,
+			Mixin: Mixin,
+			Mix: Mix,
+			Implements: Implements,
+			Class: Class,
+			Prototype: Prototype,
+			Interface: Interface
+		};
+	}, 
+	
+	Initialize = function(args, createArgs){
+		if (!this._a5_initialized) {
+			if (this.constructor.isInterface()) 
+				return a5.ThrowError(208, null, { nm: ref.namespace() });
+			if (this.constructor.isAbstract() && args !== BASE_CONSTRUCT) 
+				return a5.ThrowError(216, null, { nm: this.constructor.namespace() });
+			this._a5_initialized = true;
+			if (args !== BASE_CONSTRUCT && this.constructor.isSingleton() && this.constructor._a5_instance !== null) 
+				return a5.ThrowError(217, null, { nm: this.constructor.namespace() });
+			this._a5_instanceUID = this.namespace().replace(/\./g, '_') + '__' + this.constructor.instanceCount();
+			if (this.instanceCount() === 0) 
+				this.constructor._a5_instance = this;
+			this.constructor._instanceCount++;
+			var self = this, descenderRef = this, _args = args || [], protoPropRef = [], cs, i, l, mixinRef;
+			
+			this._a5_privatePropsRef = {};
+			if (args !== BASE_CONSTRUCT && typeof this.constructor._a5_instanceConst !== 'function') 
+				return a5.ThrowError(218, null, { clsName: this.className() });
+			while (descenderRef !== null) {
+				var dConst = descenderRef.constructor;
+				if (dConst._a5_attribs) 
+					a5.core.attributes.applyClassAttribs(this, dConst._a5_attribs);
+				if (dConst._a5_protoPrivateProps !== undefined) {
+					this._a5_privatePropsRef[descenderRef.namespace()] = {};
+					dConst._a5_protoPrivateProps.call(this._a5_privatePropsRef[descenderRef.namespace()]);
+				}
+				if (dConst._a5_protoProps !== undefined) 
+					protoPropRef.unshift(dConst._a5_protoProps);
+				
+				descenderRef = dConst.superclass &&
+				dConst.superclass().constructor.namespace ? dConst.superclass() : null;
+			}
+			a5.core.mixins.initializeMixins(this);
+			for (i = 0, l = protoPropRef.length; i < l; i++) 
+				protoPropRef[i].call(this);
+			if (args !== BASE_CONSTRUCT) {
+				if (args == FROM_CREATE) 
+					this.constructor._a5_instanceConst.apply(this, createArgs);
+				else 
+					this.constructor._a5_instanceConst.apply(this, arguments);
+			}
+			a5.core.mixins.mixinsReady(this);
+		}
 	},
 	
 	Extend = function(namespace, base, clsDef, type, isInterface, isProto, imports, mixins, attribs){
@@ -714,7 +792,13 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		
 		
 		if (!base || base === undefined) base = (namespace == 'a5.Object' ? genBaseFunc : a5.Object);
-		extender = function(){};
+		extender = function(args, createArgs){
+				var self = this;
+				if (this.constructor._a5_clsDef) 
+					processDeclaration(this.constructor._a5_clsDef, this, this, this.constructor.imports(), this.constructor);
+				if(args !== INTERFACE_TEST)
+					Initialize.apply(this, arguments);
+			}
 		
 		if (type) {
 			typeSplit = type.split(/[ |]/);
@@ -732,7 +816,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 					extender.prototype = proxy;
 					proxy = null;	
 				} else
-					extender.prototype = new base();			
+					extender.prototype = new base(BASE_CONSTRUCT);			
 				superclass = base;
 			} else
 				return a5.ThrowError('Cannot extend ' + base.namespace() + ', class marked as final.');
@@ -958,6 +1042,8 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	* @param {Object} pkg
 	*/
 	a5.Package = Package;
+	
+	a5._a5_Extend = Extend;
 	
 	a5._a5_processImports = _a5_processImports;
 
@@ -1247,50 +1333,6 @@ a5.SetNamespace('a5.core.classProxyObj',{
 					this.__proto__ = a5._a5_destroyedObj;
 			}
 		},
-		_a5_initialize: function(args){
-			if (!this._a5_initialized) {
-				if (this.constructor.isAbstract() && this._a5_initialize.caller.caller !== Extend)
-					return a5.ThrowError(216, null, {nm:this.constructor.namespace()});
-				this._a5_initialized = true;
-				if (this.constructor.isSingleton() && this.constructor._a5_instance !== null)
-					return a5.ThrowError(217, null, {nm:this.constructor.namespace()});	
-				this._a5_instanceUID = this.namespace().replace(/\./g, '_') + '__' + this.constructor.instanceCount();
-				if(this.instanceCount() === 0)
-					this.constructor._a5_instance = this;
-				this.constructor._instanceCount++;				
-				var self = this,
-					descenderRef = this,
-					_args = args || [],
-					protoPropRef = [],
-					cs, i, l, mixinRef;
-				
-				this._a5_privatePropsRef = {};
-				if (typeof this.constructor._a5_instanceConst !== 'function')
-					return a5.ThrowError(218, null, {clsName:this.className()});
-				while (descenderRef !== null) {
-					var dConst = descenderRef.constructor;
-					if (dConst._a5_attribs)
-						a5.core.attributes.applyClassAttribs(this, dConst._a5_attribs);
-					if (dConst._a5_protoPrivateProps !== undefined) {
-						this._a5_privatePropsRef[descenderRef.namespace()] = {};
-						dConst._a5_protoPrivateProps.call(this._a5_privatePropsRef[descenderRef.namespace()]);
-					}
-					if(dConst._a5_protoProps !== undefined)
-						protoPropRef.unshift(dConst._a5_protoProps);
-						
-					descenderRef = dConst.superclass && 
-									dConst.superclass().constructor.namespace ? 
-									dConst.superclass() : null;
-				}
-				a5.core.mixins.initializeMixins(this);
-				for(i = 0, l = protoPropRef.length; i<l; i++)
-					protoPropRef[i].call(this);
-				this.constructor._a5_instanceConst.apply(this, _args);
-				a5.core.mixins.mixinsReady(this);
-				return true;
-			} else
-				return null; 
-		},
 		
 		/**
 		 * @name create
@@ -1310,7 +1352,7 @@ a5.SetNamespace('a5.core.classProxyObj',{
 		 */
 		assert:function(exp, err){
 			if (exp !== true)
-				throw this.create(a5.AssertException, [err]);
+				throw new a5.AssertException(err);
 		}
 	}
 	
@@ -1331,7 +1373,7 @@ a5.SetNamespace('a5.core.verifiers', {
 		for (i = 0, l = pkgObj.implement.length; i<l; i++) {
 			implNM = pkgObj.implement[i];
 			try {
-				testInst = new obj;
+				testInst = new obj('_a5_interfaceTest');
 				testInst.Override = {};
 				testInst.Final = {};
 				testInst.Attributes = function(){
@@ -1772,7 +1814,7 @@ a5.Package('a5')
 				}
 			}
 			if (!foundTestRule || retObj === false) {
-				cls.throwError(processError(cls.create(a5.ContractException, ['no matching overload found'])));
+				cls.throwError(processError(new a5.ContractException('no matching overload found')));
 				return a5.AspectAttribute.FAILURE;
 			} else {
 				return retObj;
@@ -1813,7 +1855,7 @@ a5.Package('a5')
 				defaultVal = split[1];
 			} else {
 				if(foundOptionals)
-					return cls.create(a5.ContractException, ['for argument ' + count + ', required values cannot be defined after optional values']);
+					return new a5.ContractException('for argument ' + count + ', required values cannot be defined after optional values');
 			}
 			if(type.indexOf('.') !== -1) kind = 'class';
 			if(type === 'array') kind = 'array';
@@ -1821,7 +1863,7 @@ a5.Package('a5')
 			if(kind !== 'class') type = type.toLowerCase();
 			if (arg === undefined) {
 				if (foundOptionals) arg = discernDefault(type, kind, defaultVal, count);
-				else return cls.create(a5.ContractException, ['for argument ' + count + ', missing required argument of type "' + type + '"']);
+				else return new a5.ContractException('for argument ' + count + ', missing required argument of type "' + type + '"');
 			}
 	
 			if (arg !== undefined && arg !== null) {
@@ -1830,23 +1872,23 @@ a5.Package('a5')
 						clsDef = a5.GetNamespace(type);
 						if(clsDef.isInterface()){
 							if(!(arg.doesImplement(clsDef)))
-								return cls.create(a5.ContractException, ['for argument ' + count + ', must implement interface ' + type]);
+								return new a5.ContractException('for argument ' + count + ', must implement interface ' + type);
 						} else {
 							if (!(arg instanceof clsDef))
-								return cls.create(a5.ContractException, ['for argument ' + count + ', must be an instance of type ' + type]);
+								return new a5.ContractException('for argument ' + count + ', must be an instance of type ' + type);
 						}
 						break;
 					case 'type':
 						if(arg !== null && typeof arg !== type)
-							return cls.create(a5.ContractException, ['for argument ' + count + ', must be of type ' + type]);
+							return new a5.ContractException('for argument ' + count + ', must be of type ' + type);
 						break;
 					case 'array':
 						if (Object.prototype.toString.call(arg) !== '[object Array]')
-							return cls.create(a5.ContractException, ['for argument ' + count + ', must be an array']);
+							return new a5.ContractException('for argument ' + count + ', must be an array');
 						break;
 					case 'object':
 						if(arg._a5_initialized !== undefined || typeof arg !== 'object' || arg instanceof Array)
-							return cls.create(a5.ContractException, ['for argument ' + count + ', must be a generic object']);
+							return new a5.ContractException('for argument ' + count + ', must be a generic object');
 						break;
 				}
 			}
@@ -1910,7 +1952,7 @@ a5.Package('a5')
 			} else
 				invalid = true;
 			if(invalid)
-				return cls.create(a5.ContractException, ['for argument ' + count + ', invalid default value for data type "' + type + '"']);
+				return new a5.ContractException('for argument ' + count + ', invalid default value for data type "' + type + '"');
 			 else 
 			 	return retVal;
 		}
@@ -2391,7 +2433,7 @@ a5.Package("a5")
 		
 		proto._a5_createEvent = function(event, data, bubbles){
 			//if event was passed as a string, create a new Event object
-			var e = (typeof event === 'string') ? a5.Create(a5.Event, [event, bubbles]) : event;
+			var e = (typeof event === 'string') ? new a5.Event(event, bubbles) : event;
 			if(e instanceof a5.Event || e.doesExtend && e.doesExtend(a5.Error)){
 				e._a5_target = this;
 				if(data)
@@ -2434,7 +2476,7 @@ a5.Package("a5")
 		}
 		
 		proto.dealloc = function(){
-			this.dispatchEvent(a5.Create(a5.Event, [a5.Event.DESTROYED]));
+			this.dispatchEvent(new a5.Event(a5.Event.DESTROYED));
 			this.removeAllListeners();
 			this._a5_listeners = null;
 		}
@@ -2493,8 +2535,6 @@ a5.SetNamespace('a5.ErrorDefinitions', {
 
 })(this);
 (function(global) {
-
-var a5 = global.a5;
 a5.SetNamespace('a5.cl', true, function(){
 
     var initializer = null,
@@ -2530,7 +2570,7 @@ a5.SetNamespace('a5.cl', true, function(){
                  if (callback && typeof callback === 'function')
                      CreateCallback(callback);
                  var initializeComplete = function () {
-                    inst = a5.Create(a5.cl.CL, [props || {}, initializer]);
+                    inst = new a5.cl.CL(props || {}, initializer);
                     for (var i = 0, l = createCallbacks.length; i < l; i++)
                         createCallbacks[i](inst);
                     createCallbacks = null;
@@ -2996,7 +3036,7 @@ a5.Package('a5.cl.core')
 					
 			}
 			a5.cl.PluginConfig = function(){
-				self.throwError(self.create(a5.cl.CLError, ['Invalid call to MVC pluginConfig method: method must be called prior to plugin load.']));
+				throw new a5.cl.CLError('Invalid call to MVC pluginConfig method: method must be called prior to plugin load.');
 			}
 		}
 		
@@ -3089,7 +3129,7 @@ a5.Package('a5.cl.core')
 			clsPath = null;
 			if (cls) {
 				var clsInstance;
-				clsInstance = (cls._a5_instance === null) ? this.create(cls) : cls.instance();
+				clsInstance = (cls._a5_instance === null) ? new cls() : cls.instance();
 				clsInstance._cl_setMVCName(clsName);
 				return clsInstance;
 			} else {
@@ -3117,7 +3157,7 @@ a5.Package('a5.cl.core')
 				if(liveNamespace && typeof liveNamespace == 'object'){
 					for (var prop in liveNamespace) 
 						if (typeof liveNamespace[prop] === 'function') {
-							var instance = self.create(liveNamespace[prop]);
+							var instance = new liveNamespace(prop);
 							liveNamespace[prop]._cl_isFinal = true;
 							if (namespaceArray[i][0] === 'domains') {
 								instance._name = prop;
@@ -3849,7 +3889,7 @@ a5.Package("a5.cl.core")
 		var timer,
 		clInstance,
 		interval,
-		evtInstance = a5.Create(im.CLEvent, [im.CLEvent.GLOBAL_UPDATE_TIMER_TICK]);
+		evtInstance = new im.CLEvent(im.CLEvent.GLOBAL_UPDATE_TIMER_TICK);
 		
 		this.GlobalUpdateTimer = function(_interval){
 			self.superclass(this);
@@ -3897,7 +3937,7 @@ a5.Package('a5.cl.core')
 		this.Core = function(params){
 			self.superclass(this); 
 			_params = params;
-			_instantiator = self.create(a5.cl.core.Instantiator, [params.applicationPackage]);
+			_instantiator = new im.Instantiator(params.applicationPackage);
 		}
 			
 		this.instantiator = function(){ return _instantiator; }			
@@ -3916,10 +3956,10 @@ a5.Package('a5.cl.core')
 		
 		this.initializeCore = function($environment, $clientEnvironment){
 			updateLaunchStatus('APPLICATION_INITIALIZING');
-			_globalUpdateTimer = self.create(a5.cl.core.GlobalUpdateTimer, [_params.globalUpdateTimerInterval]);
-			_requestManager = self.create(a5.cl.core.RequestManager, [_params.requestDefaultMethod, _params.requestDefaultContentType]);
-			_pluginManager = self.create(a5.cl.core.PluginManager);
-			_cache = self.create(a5.cl.core.DataCache, [_params.cacheEnabled]);
+			_globalUpdateTimer = new im.GlobalUpdateTimer(_params.globalUpdateTimerInterval);
+			_requestManager = new im.RequestManager(_params.requestDefaultMethod, _params.requestDefaultContentType);
+			_pluginManager = new im.PluginManager();
+			_cache = new im.DataCache(_params.cacheEnabled);
 			updateLaunchStatus('CORE_LOADED');
 			var loadPaths = self.config().dependencies;
 			if(loadPaths.length){
@@ -4834,10 +4874,10 @@ a5.Package("a5.cl")
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
-			var main = cls.create(a5.cl.CLMain._extenderRef[0], [params]);
+			var main = new a5.cl.CLMain._extenderRef[0](params);
 			_params = main._cl_params();
 			_initializer = initializer;
-			core = cls.create(a5.cl.core.Core, [_params]);
+			core = new a5.cl.core.Core(_params);
 			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
 			if (_config.breakOnDestroyedMethods == true) {
 				a5._a5_destroyedObjFunc = Function('debugger;');
@@ -4941,9 +4981,9 @@ a5.Package('a5.cl')
 		proto.CLMain = function(params){
 			proto.superclass(this);
 			if(CLMain._extenderRef.length > 1)
-				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid class "' + this.namespace() + '", a5.cl.CLMain must only be extended by one subclass.']))
+				throw new a5.cl.CLError('Invalid class "' + this.namespace() + '", a5.cl.CLMain must only be extended by one subclass.');
 			if(this.getStatic().instanceCount() > 1)
-				return proto.throwError(proto.create(a5.cl.CLError, ['Invalid duplicate instance of a5.cl.CLMain subclass "' + this.getStatic().namespace() + '"']));
+				throw new a5.cl.CLError('Invalid duplicate instance of a5.cl.CLMain subclass "' + this.getStatic().namespace() + '"');
 			for (var prop in configDefaults)
 				if(params[prop] === undefined)
 					params[prop] = configDefaults[prop];
@@ -5275,7 +5315,7 @@ a5.Package('a5.cl.initializers.dom')
 					if(clErr && e !== "" && e.indexOf(clErr.toString()) !== -1)
 						e = clErr;
 					else
-						e = a5.Create(a5.Error, [e, false]);
+						e = new a5.Error(e, false);
 					if(url) e.url = url;
 					if(line) e.line = line;
 					self.cl().dispatchEvent(im.CLEvent.ERROR_THROWN, e);			
@@ -5794,12 +5834,12 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.Override.applicationInitialized = function(inst){
 			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
-			resourceCache = cls.create(im.ResourceCache, [props.cacheTypes || [], 
+			resourceCache = new im.ResourceCache, (props.cacheTypes || [], 
 									props.cacheBreak || false, 
 									props.staggerDependencies || true,
 									props.xhrDependencies || false,
-									props.silentIncludes || false]);
-			envManager = cls.create(im.EnvManager, [inst.environment()]);
+									props.silentIncludes || false);
+			envManager = new im.EnvManager(inst.environment());
 		}
 		
 		var eAppPreparedHandler = function(){
@@ -5962,7 +6002,7 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		cls.Override.initializePlugin = function(){
-			manifestManager = cls.create(im.ManifestManager);
+			manifestManager = new im.ManifestManager();
 		}
 		
 		cls.manifestManager = function(){
@@ -6040,5 +6080,5 @@ a5.Package('a5.cl.initializers.dom')
 		
 });
 
-a5.Create(a5.cl.initializers.dom.DOMInitializer);
+new a5.cl.initializers.dom.DOMInitializer();
 
