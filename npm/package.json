@@ -1,6 +1,6 @@
 {
     "name": "a5",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "NodeJS implementation of the A5 JavaScript development framework",
     "main": "./lib/A5-CL-Node.js",
 	"bin": { "a5": "./lib/CommandLine.js" },
