@@ -435,6 +435,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		FROM_CREATE = '_a5_constructFromCreate', 
 		BASE_CONSTRUCT = "_a5_baseConstruct", 
 		INTERFACE_TEST = '_a5_interfaceTest',
+		watchPkgs = {},
 		
 	Create = function(classRef, args){
 		var ref, retObj;
@@ -448,6 +449,16 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			return a5.ThrowError(207, null, { className: classRef });
 		return new ref(FROM_CREATE, args);
 	}, 
+	
+	updateWatches = function(pkg, clsName, obj){
+		var pkgName = pkg.replace(/\./g, '_');
+		if(watchPkgs[pkgName]){
+			var arr = watchPkgs[pkgName];
+			for(var i = 0, l = arr.length; i<l; i++)
+				if(!arr[i][clsName])
+					arr[i][clsName] = obj;
+		}
+	},
 	
 	processDeclaration = function(owner, scope, obj, imports, stRef, isProto){
 		if (isProto) {
@@ -544,7 +555,8 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	}, 
 	
 	Package = function(pkg){
-		var imports, clsName, cls, base, type, proto, implement, mixins, attribs = null, staticMethods = false, isMixin = false, isInterface = false, enumDeclaration = false, isProto = false, process = function(){
+		var imports, clsName, cls, base, type, proto, implement, mixins, attribs = null, staticMethods = false, isMixin = false, isInterface = false, enumDeclaration = false, isProto = false, 
+			process = function(){
 			var im = _a5_processImports(imports, pkg), pkgObj = {
 				pkg: pkg,
 				imports: imports,
@@ -965,10 +977,14 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			delete obj._mixinDef.MustExtend;
 			delete obj._mixinDef.MustMix;
 		}
+		updateWatches(pkgObj.pkg, pkgObj.clsName, obj);
 		if (!fromQueue) processQueue();
 	},
 	
 	_a5_processImports = function(array, pkg, $isRebuild){
+		if(array == undefined)
+			array = [];
+		array.push(pkg + '.*');
 		return (function(array, pkg){
 			var retObj = function(){
 					if (rebuildArray.length) {
@@ -1002,14 +1018,19 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			if(pkg) 
 				processObj(a5.GetNamespace(pkg, null, true));
 			if (array) {
-				var str, pkg, clsName, isWC, dotIndex;
+				var str, pkg, clsName, isWC, dotIndex, pkgName;
 				for (i = 0, l = array.length; i < l; i++) {
 					str = array[i], isWC = false, dotIndex = str.lastIndexOf('.');
 					if (str.charAt(str.length - 1) == '*') isWC = true;
 					if (isWC) {
-						pkg = a5.GetNamespace(str.substr(0, str.length - 2), null, true);
+						pkgName = str.substr(0, str.length - 2);
+						pkg = a5.GetNamespace(pkgName, null, true);
 						if(pkg)
 							processObj(pkg);
+						var pkgName = pkgName.replace(/\./g, '_');
+						if(!watchPkgs[pkgName])
+							watchPkgs[pkgName] = [];
+						watchPkgs[pkgName].push(retObj);
 						rebuildArray.push(str);
 					} else {
 						clsName = dotIndex > -1 ? str.substr(dotIndex + 1) : str;

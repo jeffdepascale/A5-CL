@@ -9,7 +9,7 @@ a5.Package('com.testpilot111')
 		}
 		
 		cls.Override.applicationLaunched = function(){
-			new com.testpilot111.Server();
+			new im.Server();
 		}
 })
 
