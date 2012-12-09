@@ -117,7 +117,7 @@ a5.Package('a5.cl.core')
 			}
 			
 			isMax = isMax || false;
-			var versionVal = parseVersionString(a5.version()),
+			var versionVal = parseVersionString(a5.Version()),
 			testVal = parseVersionString(String(val));
 			if (versionVal.major !== testVal.major)
 		        return isMax ? (versionVal.major < testVal.major) : (versionVal.major > testVal.major);

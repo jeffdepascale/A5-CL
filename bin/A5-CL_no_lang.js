@@ -139,10 +139,6 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
-		proto.Override.throwError = function(error){
-			proto.superclass().throwError(error, a5.cl.CLError);
-		}
-		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
@@ -766,7 +762,7 @@ a5.Package('a5.cl.core')
 			}
 			
 			isMax = isMax || false;
-			var versionVal = parseVersionString(a5.version()),
+			var versionVal = parseVersionString(a5.Version()),
 			testVal = parseVersionString(String(val));
 			if (versionVal.major !== testVal.major)
 		        return isMax ? (versionVal.major < testVal.major) : (versionVal.major > testVal.major);

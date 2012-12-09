@@ -2,8 +2,8 @@
 
 require("a5")
 
-a5.Package('com.testpilot111')
-	
+a5.Package('a5.nodejs')
+	.Import('a5.nodejs.helpers.*')
 	.Extends('a5.cl.CLMain')
 	.Class('Main', function(cls, im){
 		
@@ -19,7 +19,17 @@ a5.Package('com.testpilot111')
 					args = [];
 				if(process.argv.length >3)
 					args = process.argv.splice(3);
-				console.log(command, args);
+				switch(command){
+					case "doc":
+						new im.Doc(args);
+						break;
+					case "create":
+						new im.Create(args);
+						break;
+					default:
+						console.log("Invalid switch '" + command +'". Run a5 help to see options.');
+						break;
+				}
 			}
 		}
 })

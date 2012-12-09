@@ -58,10 +58,6 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
-		proto.Override.throwError = function(error){
-			proto.superclass().throwError(error, a5.cl.CLError);
-		}
-		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
