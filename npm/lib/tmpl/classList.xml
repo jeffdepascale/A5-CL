@@ -1,0 +1,33 @@
+
+<cl:ViewDef xmlns:cl='http://corelayerjs.com/'>
+	<cl:Imports>
+		<cl:Import ns='a5.cl.*' />
+		<cl:Import ns='a5.cl.ui.*' />
+		<cl:Import ns='a5.cl.ui.list.*' />
+	</cl:Imports>
+	
+	<cl:Defaults>
+		<cl:UIListItem collapsedSize='30'/>
+	</cl:Defaults>
+	
+	<cl:Definition>
+		
+		<cl:UIListView>
+				<% for (var i = 0, l = docArray.length; i<l; i++) {  %>
+					<% if(!docArray[i].name.match(/TopLevel/)) { %>
+						<cl:UIListItem label='<%=docArray[i].name%>' data='<%=docArray[i].name%>'>
+							<cl:UIListView handleSize='30'>
+								<% for (var j = 0, k = docArray[i].value.length;j<k; j++) { %>
+									<% var classObj = docArray[i].value[j]; %>
+									<cl:UIListItem label='<%=classObj.name%>' data='<%=classObj.value.nm.replace(/\./g, "_")%>' />
+								<% } %>	
+							</cl:UIListView>
+						</cl:UIListItem>
+					<% } %>
+				<% } %>
+		</cl:UIListView>
+		
+		
+		
+	</cl:Definition>
+</cl:ViewDef>

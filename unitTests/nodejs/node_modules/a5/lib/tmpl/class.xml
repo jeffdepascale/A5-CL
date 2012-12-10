@@ -1,0 +1,244 @@
+
+<% for (var nm_i = 0, nm_l = docArray.length; nm_i<nm_l; nm_i++) {  %>
+	<% var nm = docArray[nm_i].value; %>
+	<% for (var cls_i = 0, cls_l = nm.length; cls_i<cls_l; cls_i++) {  %>
+		<% var cls = nm[cls_i].value; %>
+		
+		{{CLASS_BREAK}}
+		
+		<cl:ViewDef xmlns:cl='http://corelayerjs.com/'>
+			<cl:Imports>
+				<cl:Import ns='a5.cl.*' />
+				<cl:Import ns='a5.cl.ui.*' />
+				<cl:Import ns='a5.cl.ui.buttons.UIButton' />
+				<cl:Import ns='a5.cl.ui.list.*' />
+			</cl:Imports>
+			
+			<cl:Defaults>
+				<cl:UITextField fontSize='12' y='5' minHeight='20' width='100%'/>
+				<cl:UILink fontSize='12' height='auto' width='auto' nonBreaking='true' textColor='blue'/>
+			</cl:Defaults>
+			
+			<cl:Definition>	
+				<cl:CLViewContainer relY='true' padding='20' height='auto'>
+					<cl:UILink text='Package <%=cls.pkg%>'/>
+					<cl:UITextField text='<% if(cls.isFinal) { %>Final <% } %><% if(cls.isAbstract) { %>Abstract <% } %>Class <%=cls.clsName%>' fontSize='20' fontWeight='bold'/>
+					<% if(cls.isSingleton) { %>
+						<cl:UITextField fontSize='14' fontWeight='bold' text='Singleton' />	
+					<% } %>
+					<% if(cls.ext != null) { %>
+						<cl:UILink text='Extends <%=cls.ext%>'/>
+					<% } %>
+					<% for(var j=0, k=cls.impl.length; j<k; j++) { %>
+						<cl:UILink text='Implements <%=cls.impl[j]%>'/>
+					<% } %>
+					<% for(var j=0, k=cls.mix.length; j<k; j++) { %>
+						<cl:UILink text='Mixes <%=cls.mix[j]%>'/>
+					<% } %>
+					<cl:UITextField y='10' text='{String}<%=cls.comments.description %>'/>
+					<% if(cls.propsAndMethods.Constructor) { %>
+						<cl:UITextField text='Constructor' fontSize='16' fontWeight='bold' y='20'/>
+						<cl:CLViewContainer border='2' relY='true' height='auto' padding='5'>
+								<% var detailObj = cls.propsAndMethods.Constructor.details; %>
+								<% if(detailObj.description) { %>
+										<cl:UITextField y='5' text='<%=detailObj.description%>'/>
+									<% } %>
+								<% if(detailObj.params) { %>
+									<cl:UITextField text='Params:' fontWeight='bold' y='10'/>
+									<% for (var param in detailObj.params) { %>
+										<cl:UITextField y='5' text='<%=param%><% if (detailObj.params[param].type) { %>: <%=detailObj.params[param].type %><% } %><% if(detailObj.params[param].optional == true) { %>, Optional<% } %>. <%=detailObj.params[param].description %>'/>
+									<% } %>
+								<% } %>
+						</cl:CLViewContainer>
+					<% } %>
+					<% if(cls.propsAndMethods.StaticProperties) {  %>
+						<cl:UITextField text='Static Properties' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+						<% for (var j = 0, k = cls.propsAndMethods.StaticProperties.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.StaticProperties[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.StaticProperties[j].value; %>
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' height='auto' text='<%=cls.clsName%>.<%=clsProp%><% if (clsPropObj.type) { %>: <%=clsPropObj.type %> <% } %> <%=clsPropObj.description %>'/>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>
+					<% if(cls.propsAndMethods.StaticPrivateProperties) {  %>
+						<cl:UITextField text='Private Static Properties' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+						<% for (var j = 0, k = cls.propsAndMethods.StaticPrivateProperties.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.StaticPrivateProperties[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.StaticPrivateProperties[j].value; %>
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' height='auto' text='<%=clsProp%><% if (clsPropObj.type) { %>: <%=clsPropObj.type %> <% } %> <%=clsPropObj.description %>'/>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>
+					<% if(cls.propsAndMethods.StaticMethods) {  %>
+						<cl:UITextField text='Static Methods' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+							<% for (var j = 0, k = cls.propsAndMethods.StaticMethods.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.StaticMethods[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.StaticMethods[j].value; %>
+							<% var detailObj = clsPropObj.details; %>
+							
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' text='<% if(clsPropObj.isFinal) {  %>Final <% } %><%=clsProp%>'/>
+								<% if(detailObj.description) { %>
+									<cl:UITextField height='auto' text='<%=detailObj.description%>'/>
+								<% } %>
+								<% if(detailObj.params) { %>
+									<cl:UITextField text='Params:' fontWeight='bold' y='10'/>
+									<% for (var param in detailObj.params) { %>
+										<cl:UITextField y='5' text='<%=param%><% if (detailObj.params[param].type) { %>: <%=detailObj.params[param].type %><% } %><% if(detailObj.params[param].optional == true) { %>, Optional<% } %>. <%=detailObj.params[param].description %>'/>
+									<% } %>
+								<% } %>
+								<% if(detailObj.returns) { %>
+									<cl:UITextField text='Returns: <%=detailObj.returns.type %>' fontWeight='bold' y='10'/>
+									<% if(detailObj.returns.description) { %>
+										<cl:UITextField y='5' text='<%=detailObj.returns.description%>'/>
+									<% } %>
+								<% } %>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>	
+					<% if(cls.propsAndMethods.StaticPrivateMethods) {  %>
+						<cl:UITextField text='Private Static Methods' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+							<% for (var j = 0, k = cls.propsAndMethods.StaticPrivateMethods.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.StaticPrivateMethods[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.StaticPrivateMethods[j].value; %>
+							<% var detailObj = clsPropObj.details; %>
+							
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' text='<% if(clsPropObj.isFinal) {  %>Final <% } %><%=clsProp%>'/>
+								<% if(detailObj.description) { %>
+									<cl:UITextField height='auto' text='<%=detailObj.description%>'/>
+								<% } %>
+								<% if(detailObj.params) { %>
+									<cl:UITextField text='Params:' fontWeight='bold' y='10'/>
+									<% for (var param in detailObj.params) { %>
+										<cl:UITextField y='5' text='<%=param%><% if (detailObj.params[param].type) { %>: <%=detailObj.params[param].type %><% } %><% if(detailObj.params[param].optional == true) { %>, Optional<% } %>. <%=detailObj.params[param].description %>'/>
+									<% } %>
+								<% } %>
+								<% if(detailObj.returns) { %>
+									<cl:UITextField text='Returns: <%=detailObj.returns.type %>' fontWeight='bold' y='10'/>
+									<% if(detailObj.returns.description) { %>
+										<cl:UITextField y='5' text='<%=detailObj.returns.description%>'/>
+									<% } %>
+								<% } %>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>	
+					<% if(cls.propsAndMethods.Properties) {  %>
+						<cl:UITextField text='Properties' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+						<% for (var j = 0, k = cls.propsAndMethods.Properties.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.Properties[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.Properties[j].value; %>
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' height='auto' text='<%=clsProp%><% if (clsPropObj.type) { %>: <%=clsPropObj.type %> <% } %> <%=clsPropObj.description %>'/>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>
+					<% if(cls.propsAndMethods.Methods) {  %>
+						<cl:UITextField text='Methods' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+							<% for (var j = 0, k = cls.propsAndMethods.Methods.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.Methods[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.Methods[j].value; %>
+							<% var detailObj = clsPropObj.details; %>
+							
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' text='<% if(clsPropObj.isFinal) {  %>Final <% } %><%=clsProp%>'/>
+								<% if(detailObj.description) { %>
+									<cl:UITextField height='auto' text='<%=detailObj.description%>'/>
+								<% } %>
+								<% if(detailObj.params) { %>
+									<cl:UITextField text='Params:' fontWeight='bold' y='10'/>
+									<% for (var param in detailObj.params) { %>
+										<cl:UITextField y='5' text='<%=param%><% if (detailObj.params[param].type) { %>: <%=detailObj.params[param].type %><% } %><% if(detailObj.params[param].optional == true) { %>, Optional<% } %>. <%=detailObj.params[param].description %>'/>
+									<% } %>
+								<% } %>
+								<% if(detailObj.returns) { %>
+									<cl:UITextField text='Returns: <%=detailObj.returns.type %>' fontWeight='bold' y='10'/>
+									<% if(detailObj.returns.description) { %>
+										<cl:UITextField y='5' text='<%=detailObj.returns.description%>'/>
+									<% } %>
+								<% } %>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>	
+					<% if(cls.propsAndMethods.PrivateMethods) {  %>
+						<cl:UITextField text='Private Methods' fontSize='16' fontWeight='bold' y='40'/>
+						<cl:CLViewContainer relY='true' border='1' height='auto'>
+							<% for (var j = 0, k = cls.propsAndMethods.PrivateMethods.length; j<k; j++) {  %>
+							<% var clsProp = cls.propsAndMethods.PrivateMethods[j].name; %>
+							<% var clsPropObj = cls.propsAndMethods.PrivateMethods[j].value; %>
+							<% var detailObj = clsPropObj.details; %>
+							
+							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
+								<cl:UITextField fontWeight='bold' text='<% if(clsPropObj.isFinal) {  %>Final <% } %><%=clsProp%>'/>
+								<% if(detailObj.description) { %>
+									<cl:UITextField height='auto' text='<%=detailObj.description%>'/>
+								<% } %>
+								<% if(detailObj.params) { %>
+									<cl:UITextField text='Params:' fontWeight='bold' y='10'/>
+									<% for (var param in detailObj.params) { %>
+										<cl:UITextField y='5' text='<%=param%><% if (detailObj.params[param].type) { %>: <%=detailObj.params[param].type %><% } %><% if(detailObj.params[param].optional == true) { %>, Optional<% } %>. <%=detailObj.params[param].description %>'/>
+									<% } %>
+								<% } %>
+								<% if(detailObj.returns) { %>
+									<cl:UITextField text='Returns: <%=detailObj.returns.type %>' fontWeight='bold' y='10'/>
+									<% if(detailObj.returns.description) { %>
+										<cl:UITextField y='5' text='<%=detailObj.returns.description%>'/>
+									<% } %>
+								<% } %>
+							</cl:CLViewContainer>
+						<% } %>	
+						</cl:CLViewContainer>
+					<% } %>	
+					<% if(cls.propsAndMethods.InheritedMethods) {  %>
+						<cl:CLViewContainer relX='true' height='auto' >
+							<cl:UITextField text='Inherited Methods' fontSize='16' fontWeight='bold' y='20' width='auto' />
+							<cl:UIButton id='inheritedMethodsBtn' x='5' label='Show' alignY='bottom'/>
+						</cl:CLViewContainer>
+						<cl:CLViewContainer id='inheritedMethods' relY='true' border='1' height='auto' visible='false'>
+							<% for (var j = 0, k = cls.propsAndMethods.InheritedMethods.length; j<k; j++) {  %>
+								<% var clsProp = cls.propsAndMethods.InheritedMethods[j].name; %>
+								<% var clsPropObj = cls.propsAndMethods.InheritedMethods[j].value; %>
+								<% var detailObj = clsPropObj.details; %>
+								<cl:CLViewContainer border="1" relY='true' height='auto' padding='5'>
+									<cl:UITextField fontWeight='bold' text='<% if(clsPropObj.isFinal) {  %>Final <% } %><%=clsProp%>'/>
+									<cl:UILink text='Defined by <%=clsPropObj.definedBy%>'/>
+									<% if(detailObj.description) { %>
+										<cl:UITextField height='auto' text='<%=detailObj.description%>'/>
+									<% } %>
+									<% if(detailObj.params) { %>
+										<cl:UITextField text='Params:' fontWeight='bold' y='10'/>
+										<% for (var param in detailObj.params) { %>
+											<cl:UITextField y='5' text='<%=param%><% if (detailObj.params[param].type) { %>: <%=detailObj.params[param].type %><% } %><% if(detailObj.params[param].optional == true) { %>, Optional<% } %>. <%=detailObj.params[param].description %>'/>
+										<% } %>
+									<% } %>
+									<% if(detailObj.returns) { %>
+									<cl:UITextField text='Returns: <%=detailObj.returns.type %>' fontWeight='bold' y='10'/>
+									<% if(detailObj.returns.description) { %>
+										<cl:UITextField y='5' text='<%=detailObj.returns.description%>'/>
+									<% } %>
+								<% } %>
+								</cl:CLViewContainer>
+							<% } %>	
+						</cl:CLViewContainer>
+					<% } %>	
+				</cl:CLViewContainer>
+			</cl:Definition>
+		</cl:ViewDef>
+	
+	<% } %>	
+<% } %>	
+

@@ -1,0 +1,22 @@
+<cl:ViewDef xmlns:cl='http://corelayerjs.com/'>
+	<cl:Imports>
+		<cl:Import ns='a5.cl.*' />
+		<cl:Import ns='a5.cl.ui.*' />
+		<cl:Import ns='apps.docs.views.*' />
+		<cl:Import ns='apps.docs.controllers.*' />
+	</cl:Imports>
+	
+	<cl:Defaults>
+		
+	</cl:Defaults>
+	
+	<cl:Definition>
+		<cl:CLWindow relX='true' constrainChildren='true'>
+			<cl:UIResizable id='leftPane' cl:Init='e' scrollYEnabled='true' width='250' minWidth='150' maxWidth='700'/>
+			<cl:CLView id='divider' width='1' backgroundColor='#666' />
+			<cl:CLViewContainer id='contentHolder' scrollYEnabled='true' scrollXEnabled='true' padding='{Object}{"left":10, "right":10}'>
+				<cl:CLHTMLView id='htmlView' height='auto' handleAnchors='true'/>
+			</cl:CLViewContainer>
+		</cl:CLWindow>
+	</cl:Definition>
+</cl:ViewDef>
