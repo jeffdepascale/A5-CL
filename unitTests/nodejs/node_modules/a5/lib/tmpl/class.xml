@@ -155,6 +155,10 @@
 							
 							<cl:CLViewContainer border='1' relY='true' height='auto' padding='5'>
 								<cl:UITextField fontWeight='bold' text='<% if(clsPropObj.isFinal) {  %>Final <% } %><%=clsProp%>'/>
+								<% if(clsPropObj.isOverride) {  %>
+									<cl:UITextField fontStyle='italic' text='Override'/>
+									
+								<% } %>
 								<% if(detailObj.description) { %>
 									<cl:UITextField height='auto' text='<%=detailObj.description%>'/>
 								<% } %>

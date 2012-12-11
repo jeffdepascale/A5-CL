@@ -6,12 +6,20 @@ a5.Package('a5.nodejs.helpers')
 	.Class('Doc', function(cls, im){
 		
 		var textProcessor,
-			generator;
+			generator,
+			includeA5 = true;
 		
 		cls.Doc = function(args){
 			cls.superclass(this);
 			textProcessor = new im.TextProcessor();
 			generator = new im.Generator();
+			for(var i = 0, l = args.length; i<l; i++){
+				switch(args[i]){
+					case "-noa5":
+						includeA5 = false;
+						break;
+				}
+			}
 			gatherFiles(function(arr){
 				generate(arr);
 			});
@@ -71,6 +79,11 @@ a5.Package('a5.nodejs.helpers')
 						im.fs.readFile('./main.js', 'utf8', function(err, data){
 							results.push(data);
 							complete(results);
+							im.fs.readFile(__dirname +'/../A5-CL-Node.js', 'utf8', function(err, data){
+								if(includeA5)
+									results.push(data);
+								complete(results);
+							});
 						});
 					}
 				})

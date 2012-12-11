@@ -268,6 +268,7 @@ a5.Package('a5.nodejs.helpers.docs')
 		}
 		
 		var parseInstancePropsAndMethods = function(str, type, clsName, nm){
+			str = str.replace(/function +/g, 'function');
 			var delimIndex = str.indexOf('function(', str.indexOf('.' + type + '(')) + 9,
 				endDelim = str.indexOf(')', delimIndex),
 				delimWord = str.substring(delimIndex, endDelim),
@@ -298,7 +299,7 @@ a5.Package('a5.nodejs.helpers.docs')
 						methodName = methodEndIndex !== -1 ? trim(line.substring(checkedDelimWord.length+1, methodEndIndex)):'',
 						commentStart = -1,
 						commentsObj = {};
-					if (methodName.match(/^[a-zA-Z0-9_]*$/)) {
+					if (methodName.match(/^[a-zA-Z0-9_.]*$/)) {
 						if (i > 0 && trim(strArray[i - 1]).substr(0, 2) === '*/') {
 							for (var j = i - 1; j > -1; j--) {
 								if (trim(strArray[j]).substr(0, 3) === '/**') {
@@ -307,8 +308,12 @@ a5.Package('a5.nodejs.helpers.docs')
 								}
 							}
 						}
-						if (methodName && methodName.indexOf('Override.') === -1 && methodName !== 'dealloc') {
-							var isFinal = false, isPrivate = false;
+						if (methodName && methodName !== 'dealloc') {
+							var isFinal = false, isPrivate = false, isOverride = false;
+							if(methodName.indexOf('Override.') === 0){
+								isOverride = true;
+								methodName = methodName.substr(9);
+							}
 							if (methodName.indexOf('Final.') === 0) {
 								isFinal = true;
 								methodName = methodName.substr(6);
@@ -353,6 +358,7 @@ a5.Package('a5.nodejs.helpers.docs')
 									if(!obj[methodName])
 										obj[methodName] = {
 											isFinal: isFinal,
+											isOverride:isOverride,
 											definedBy:nm,
 											details: commentsObj
 										}
