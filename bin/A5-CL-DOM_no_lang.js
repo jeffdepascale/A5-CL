@@ -80,7 +80,6 @@ a5.SetNamespace('a5.cl', true, function(){
 
 
 
-
 /**
  * Base class for all classes in an A5 CL application. 
  */
@@ -102,8 +101,10 @@ a5.Package('a5.cl')
 		 * @return {a5.cl.CL}
 		 */
 		proto.cl = function(){
-			return a5.cl.Instance();
+			return a5.cl.CL.instance();
 		}
+		
+		proto.create = function(){ return a5.Create.apply(this, arguments); }
 		
 		/**
 		 * Returns an instance of the class defined by the specified parameters
@@ -155,11 +156,10 @@ a5.Package('a5.cl')
 		proto.appParams = function(){
 			return this.cl().appParams();
 		}
+		
 });
 
-
-
-﻿a5.Package('a5.cl')
+a5.Package('a5.cl')
 
     .Extends('a5.cl.CLBase')
     .Prototype('CLInitializer', function (cls, im) {
@@ -599,27 +599,13 @@ a5.Package('a5.cl.core')
 			}
 		}
 		
-		this.instantiateConfiguration = function(){
-			var retObj = a5.cl.CLMain._cl_storedCfgs.config;
-			var plgnArray = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
-			for (var i = 0; i < plgnArray.length; i++) {
-				var obj = {};
-				var split = plgnArray[i].nm.split('.'),
-					lastObj = obj;
-				for(var j = 0; j< split.length; j++)
-					lastObj = lastObj[split[j]] = j == split.length-1 ? plgnArray[i].obj:{};
-				retObj.plugins = a5.cl.core.Utils.mergeObject(retObj.plugins, obj)
-			}
-			return retObj;
-		}
-		
 		this.beginInstantiation = function(){
 			for(var i = 0, l=namespaceArray.length; i<l; i++){
 				var liveNamespace = a5.GetNamespace(applicationPackage + '.' + namespaceArray[i][0], null, true);
 				if(liveNamespace && typeof liveNamespace == 'object'){
 					for (var prop in liveNamespace) 
 						if (typeof liveNamespace[prop] === 'function') {
-							var instance = new liveNamespace(prop);
+							var instance = new liveNamespace[prop];
 							liveNamespace[prop]._cl_isFinal = true;
 							if (namespaceArray[i][0] === 'domains') {
 								instance._name = prop;
@@ -818,104 +804,99 @@ a5.Package('a5.cl.core')
 
 		this.processItem = function(props, reqID){
 			var req;
-			try {	
-				var reqComplete = function($req){
-					if (getPropsForID(reqID)) {
-						var req = this;
-						if (req.readyState == 4) {
-							var response, retData, status = req.status;
-							if (status !== 500) {
-								if (props.isJson) {
-									response = req.responseText;
-									
-									if (a5.cl.core.Utils.trim(response) !== "") {
-										try {
-											response = a5.cl.core.JSON.parse(response);
-											retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
-										} 
-										catch (e) {
-											status = 500;
-											retData = "Error parsing JSON response from url: " + props.url + "\nresponse: " + response;
-										}
+			var reqComplete = function($req){
+				if (getPropsForID(reqID)) {
+					var req = this;
+					if (req.readyState == 4) {
+						var response, retData, status = req.status;
+						if (status !== 500) {
+							if (props.isJson) {
+								response = req.responseText;
+								
+								if (a5.cl.core.Utils.trim(response) !== "") {
+									try {
+										response = a5.cl.core.JSON.parse(response);
+										retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
+									} 
+									catch (e) {
+										status = 500;
+										retData = "Error parsing JSON response from url: " + props.url + "\nresponse: " + response;
 									}
 								}
-								else 
-									if (props.isXML && req.responseXML) {
-										response = req.responseXML;
-									}
-									else {
-										response = req.responseText;
-									}
-								if (retData === undefined) 
-									retData = response;
 							}
-							if (status == 200 || (status == 0)) {
-								self.success(reqID, retData);
-							}
-							else {
-								self.onError(reqID, status, retData || req.responseText);
-							}
-							self.reqComplete(reqID);
+							else 
+								if (props.isXML && req.responseXML) {
+									response = req.responseXML;
+								}
+								else {
+									response = req.responseText;
+								}
+							if (retData === undefined) 
+								retData = response;
 						}
-					}
-				},
-				
-				updateProgress = function(e){
-					self.updateProgress(reqID, e);
-				},
-				
-				onError = function(e){
-					self.onError(reqID, req.status, e);
-				},
-				
-				createAppend = function(data, isGet){
-					var retString = isGet ? '?':'';
-					for(var prop in data)
-						retString += prop + '=' + data[prop] + '&';
-					return retString.substr(0, retString.length-1);
-				},
-				
-				contentType = null;
-					req = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('MSXML2.XMLHTTP.3.0');
-				if (req !== undefined) {
-					var method = props.method || defaultMethod,
-						data = props.data || null,
-						urlAppend = method == "GET" ? createAppend(props.data, true) : '';
-					if (data) {
-						if (props.formData === true) {
-							contentType = "multipart/form-data";
-							var fd = new FormData();
-							for (var prop in data) 
-								fd.append(prop, data[prop])
-							data = fd;
-						} else if (props.isJson) {
-							data = a5.cl.core.JSON.stringify(data);
-						} else {
-							contentType = 'application/x-www-form-urlencoded';
-							data = createAppend(data, false);
+						if (status == 200 || (status == 0)) {
+							self.success(reqID, retData);
 						}
+						else {
+							self.onError(reqID, status, retData || req.responseText);
+						}
+						self.reqComplete(reqID);
 					}
-					if(contentType === null)
-						 contentType = defaultContentType;
-					if(props.contentType)
-						contentType = props.contentType;
-					props.isJson = props.isJson !== undefined ? props.isJson:(contentType && contentType.toLowerCase().indexOf('json') != -1 ? true : false);
-					props.isXML = (!props.isJson && contentType.toLowerCase().indexOf('xml')) != -1 ? true : false;
-					props.charSet = props.charSet || null;
-					if (req.addEventListener != undefined) req.addEventListener("progress", updateProgress, false);
-					if (XMLHttpRequest) req.onerror = onError;
-					req.onreadystatechange = reqComplete;
-					req.open(method, props.url + urlAppend, true);
-					if(props.formData !== true)
-						req.setRequestHeader("Content-type", contentType);
-					if (props.charSet) req.setRequestHeader("charset", props.charSet);
-					req.send(data);
-				} else {
-					if (props.error) props.error('client does not support XMLHTTPRequests');
 				}
-			} catch (e) {
-				req = null;
-				self.throwError(e);
+			},
+			
+			updateProgress = function(e){
+				self.updateProgress(reqID, e);
+			},
+			
+			onError = function(e){
+				self.onError(reqID, req.status, e);
+			},
+			
+			createAppend = function(data, isGet){
+				var retString = isGet ? '?':'';
+				for(var prop in data)
+					retString += prop + '=' + data[prop] + '&';
+				return retString.substr(0, retString.length-1);
+			},
+			
+			contentType = null;
+				req = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('MSXML2.XMLHTTP.3.0');
+			if (req !== undefined) {
+				var method = props.method || defaultMethod,
+					data = props.data || null,
+					urlAppend = method == "GET" ? createAppend(props.data, true) : '';
+				if (data) {
+					if (props.formData === true) {
+						contentType = "multipart/form-data";
+						var fd = new FormData();
+						for (var prop in data) 
+							fd.append(prop, data[prop])
+						data = fd;
+					} else if (props.isJson) {
+						data = a5.cl.core.JSON.stringify(data);
+					} else {
+						contentType = 'application/x-www-form-urlencoded';
+						data = createAppend(data, false);
+					}
+				}
+				if(contentType === null)
+					 contentType = defaultContentType;
+				if(props.contentType)
+					contentType = props.contentType;
+				props.isJson = props.isJson !== undefined ? props.isJson:(contentType && contentType.toLowerCase().indexOf('json') != -1 ? true : false);
+				props.isXML = (!props.isJson && contentType.toLowerCase().indexOf('xml')) != -1 ? true : false;
+				props.charSet = props.charSet || null;
+				if (req.addEventListener != undefined) req.addEventListener("progress", updateProgress, false);
+				if (XMLHttpRequest) req.onerror = onError;
+				req.onreadystatechange = reqComplete;
+				req.open(method, props.url + urlAppend, true);
+				if(props.formData !== true)
+					req.setRequestHeader("Content-type", contentType);
+				if (props.charSet) req.setRequestHeader("charset", props.charSet);
+				req.send(data);
+			} else {
+				if (props.error) props.error('client does not support XMLHTTPRequests');
 			}
 		}
 		
@@ -2113,7 +2094,7 @@ a5.Package('a5.cl')
 					clearInterval(aspectArgs.method()._cl_cycleID);
 					delete aspectArgs.method()._cl_cycleID;
 				}
-				return a5.Attribute.ASYNC;
+				return a5.AspectAttribute.ASYNC;
 			}
 			if (rules.cycle) {
 				if (!aspectArgs.method()._cl_cycleID) {
@@ -2127,7 +2108,7 @@ a5.Package('a5.cl')
 			} else {
 				executeCall();
 			}
-			return a5.Attribute.ASYNC;
+			return a5.AspectAttribute.ASYNC;
 		}	
 		
 		var getData = function(method){
@@ -2336,11 +2317,26 @@ a5.Package("a5.cl")
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
-			var main = new a5.cl.CLMain._extenderRef[0](params);
+			var searching = true,
+				clsDef = a5.cl.CLMain,
+				main;
+			do{
+				if(clsDef.isPrototype() && clsDef._extenderRef.length == 0){
+					searching = false;
+					//TODO: throw error on failure, only applies when CLMain extendenders exist
+					return;
+				}
+				if(clsDef._extenderRef[0].isPrototype()){
+					clsDef = clsDef._extenderRef[0];
+				} else {
+					main = new clsDef._extenderRef[0](params);
+					searching = false;
+				} 
+			}while(searching);
 			_params = main._cl_params();
 			_initializer = initializer;
 			core = new a5.cl.core.Core(_params);
-			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
+			_config = params;
 			if (_config.breakOnDestroyedMethods == true) {
 				a5._a5_destroyedObjFunc = Function('debugger;');
 			}
@@ -2415,6 +2411,7 @@ a5.Package("a5.cl")
 });
 
 
+
 a5.Package('a5.cl')
 
 	.Extends('CLBase')
@@ -2461,13 +2458,11 @@ a5.Package('a5.cl')
 			proto.cl().addOneTimeEventListener(im.CLEvent.APPLICATION_LAUNCHED, this.applicationLaunched);
 		}
 		
-		proto.Override.cl = function(){
-			return a5.cl.CL.instance();
-		}
-		
 		proto.allowUntestedPlugins = function(val){ _params.allowUntestedPlugins = val; }
 		
 		proto.appName = function(val){ _params.appName = val; }
+		
+		proto.applicationBuild = function(val){ _params.applicationBuild = val; }
 		
 		proto.breakOnDestroyedMethods = function(val){ _params.breakOnDestroyedMethods = val; }
 		
@@ -2854,7 +2849,7 @@ a5.Package('a5.cl.initializers.dom')
 		var eAppIntializingHandler = function(){
 			requestManager = a5.cl.core.RequestManager.instance();
 			if(shouldCacheBreak && typeof self.cl().applicationBuild() === 'string'){
-				var trimVal = im.Utils.trim(self.cl().applicationBuild());
+				var trimVal = a5.cl.core.Utils.trim(self.cl().applicationBuild());
 				if(trimVal !== "")
 					cacheBreakValue = trimVal;
 			}
@@ -2950,7 +2945,7 @@ a5.Package('a5.cl.initializers.dom')
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
-								else self.throwError('Error loading css resource at url ' + url);
+								else throw 'Error loading css resource at url ' + url;
 							},
 							headID = document.getElementsByTagName("head")[0],
 							elem = document.createElement('link');
@@ -2965,7 +2960,7 @@ a5.Package('a5.cl.initializers.dom')
 						} else if (type === 'image'){
 							var imgObj = new Image(),
 							clearImage = function(){
-								a5.cl.mvc.core.GarbageCollector.instance().destroyElement(imgObj);
+								//a5.cl.mvc.core.GarbageCollector.instance().destroyElement(imgObj);
 								imgObj = null;
 								updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
 								continueLoad();
@@ -2977,7 +2972,7 @@ a5.Package('a5.cl.initializers.dom')
 												
 							imgObj.onload = clearImage;
 							imgObj.onerror = imgError;
-							imgObj.src = data;
+							imgObj.src = url;
 						} else if (type === 'js' && xhrDependencies === false && asXHR == false){
 							var insertElem = function(){
 								head.insertBefore(include, head.firstChild);
@@ -3078,10 +3073,8 @@ a5.Package('a5.cl.initializers.dom')
 			value = a5.cl.core.Utils.trim(value);
 			var regex = new RegExp(ResourceCache._cl_delimiterOpen + '.*?' + ResourceCache._cl_delimiterClose, 'g');
 			if(regex.test(value)){
-				if (value.indexOf(ResourceCache._cl_delimiterOpen) !== 0) {
-					self.throwError('Error parsing combined resource: ' + url + '\n\nCombined XML and HTML resources must start with a delimiter');
-					return;
-				}
+				if (value.indexOf(ResourceCache._cl_delimiterOpen) !== 0)
+					throw 'Error parsing combined resource: ' + url + '\n\nCombined XML and HTML resources must start with a delimiter';
 				//if the loaded content is a combined file, uncombine it and store each piece
 				var result, delimiters = [];
 				//find all of the delimiters
@@ -3124,8 +3117,8 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		var discernType = function(url){
-			var urlArray = url.split('.'),
-				extension = urlArray[urlArray.length-1].replace(/\?.*$/, ''); //the replace() removes querystring params
+			var urlArray = url.replace(/\?.*$/, '').split('.'),
+				extension = urlArray[urlArray.length-1];
 			for (var i = 0, l=cacheTypes.length; i < l; i++) {
 				if (typeof cacheTypes[i] != 'object' ||
 				cacheTypes[i].extension == undefined ||
@@ -3141,24 +3134,18 @@ a5.Package('a5.cl.initializers.dom')
 		var processData = function(url, data, type, callback){
 			switch (type){
 				case 'js':
+					var insertElem = function(){
+						head.insertBefore(include, head.firstChild);
+					}
+					var head = document.getElementsByTagName("head")[0], include = document.createElement("script");
+					include.type = "text/javascript";					
 					try {
-						var insertElem = function(){
-							head.insertBefore(include, head.firstChild);
-						}
-						var head = document.getElementsByTagName("head")[0], include = document.createElement("script");
-						include.type = "text/javascript";					
-						try {
-							include.appendChild(document.createTextNode(data));
-						} catch (e) {
-							include.text = data;
-						} finally {
-							insertElem();
-							callback();
-						}
+						include.appendChild(document.createTextNode(data));
 					} catch (e) {
-						self.throwError(e);
+						include.text = data;
 					} finally {
-						include = head = null;
+						insertElem();
+						callback();
 					}
 					break;
 				case 'html':
@@ -3296,7 +3283,7 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.Override.applicationInitialized = function(inst){
 			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
-			resourceCache = new im.ResourceCache, (props.cacheTypes || [], 
+			resourceCache = new im.ResourceCache(props.cacheTypes || [], 
 									props.cacheBreak || false, 
 									props.staggerDependencies || true,
 									props.xhrDependencies || false,
@@ -3305,7 +3292,7 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		var eAppPreparedHandler = function(){
-			envManager.initialize();
+			envManager.initialize(props.trapErrors);
 		}
 });
 
@@ -3443,7 +3430,6 @@ a5.Package('a5.cl.initializers.dom')
 		}
 });
 
-﻿
 a5.Package('a5.cl.initializers.dom')
 
 	.Extends('a5.cl.CLAddon')
@@ -3472,7 +3458,7 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		cls.environmentManager = function(){
-			return envManager;
+			return cls.cl().initializer().environmentManager();
 		}
 		
 		/**
@@ -3480,20 +3466,20 @@ a5.Package('a5.cl.initializers.dom')
 		 * @type String
 		 * @param {Boolean} [root]
 		 */
-		cls.appPath = function(root){ return envManager.appPath(root); }
+		cls.appPath = function(root){ return cls.environmentManager().appPath(root); }
 		
 		/**
 		 *
 		 * @type Number
 		 */
-		cls.browserVersion = function(){	return envManager.browserVersion();	}
+		cls.browserVersion = function(){	return cls.environmentManager().browserVersion();	}
 		
 		/**
 		 * Defines A5 CL client environment types. One of 'DESKTOP', 'MOBILE', or 'TABLET'.
 		 *
 		 * @type String
 		 */
-		cls.clientEnvironment = function(){	return envManager.clientEnvironment.apply(null, arguments);	}
+		cls.clientEnvironment = function(){	return cls.environmentManager().clientEnvironment.apply(null, arguments);	}
 		
 		/**
 		 * Defines A5 CL client platform types.<br/>
@@ -3507,12 +3493,12 @@ a5.Package('a5.cl.initializers.dom')
 		 *
 		 * @type String
 		 */
-		cls.clientPlatform = function(){		return envManager.clientPlatform();	}
+		cls.clientPlatform = function(){		return cls.environmentManager().clientPlatform();	}
 		
 		/**
 		 * 
 		 */
-		cls.clientOrientation = function(){ return envManager.clientOrientation(); }	
+		cls.clientOrientation = function(){ return cls.environmentManager().clientOrientation(); }	
 		
 		
 		/**
@@ -3520,7 +3506,7 @@ a5.Package('a5.cl.initializers.dom')
 		 *
 		 * @type String
 		 */
-		cls.environment = function(){	return envManager.environment();	}
+		cls.environment = function(){	return cls.environmentManager().environment();	}
 		
 		/**
 		 * Returns whether the client environment supports manifest caching.
@@ -3532,13 +3518,13 @@ a5.Package('a5.cl.initializers.dom')
 		 * Returns whether the application is running on http:// or file://
 		 *
 		 */
-		cls.isLocal = function(){ return envManager.isLocal(); }
+		cls.isLocal = function(){ return cls.environmentManager().isLocal(); }
 		
 		/**
 		 * Returns the current online state of the client browser, where supported.
 		 *
 		 */
-		cls.isOnline = function(){	return envManager.isOnline();	}	
+		cls.isOnline = function(){	return cls.environmentManager().isOnline();	}	
 		
 });
 

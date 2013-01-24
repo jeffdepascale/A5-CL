@@ -58,7 +58,7 @@ a5.Package('a5.cl.initializers.dom')
 		
 		cls.Override.applicationInitialized = function(inst){
 			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
-			resourceCache = new im.ResourceCache, (props.cacheTypes || [], 
+			resourceCache = new im.ResourceCache(props.cacheTypes || [], 
 									props.cacheBreak || false, 
 									props.staggerDependencies || true,
 									props.xhrDependencies || false,
@@ -67,6 +67,6 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		var eAppPreparedHandler = function(){
-			envManager.initialize();
+			envManager.initialize(props.trapErrors);
 		}
 });

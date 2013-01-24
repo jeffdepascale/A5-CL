@@ -17,7 +17,8 @@ a5.Package("a5.cl")
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
 			var searching = true,
-				clsDef = a5.cl.CLMain;
+				clsDef = a5.cl.CLMain,
+				main;
 			do{
 				if(clsDef.isPrototype() && clsDef._extenderRef.length == 0){
 					searching = false;
@@ -27,14 +28,14 @@ a5.Package("a5.cl")
 				if(clsDef._extenderRef[0].isPrototype()){
 					clsDef = clsDef._extenderRef[0];
 				} else {
-					_main = self.create(clsDef._extenderRef[0], [params]);
+					main = new clsDef._extenderRef[0](params);
 					searching = false;
 				} 
 			}while(searching);
 			_params = main._cl_params();
 			_initializer = initializer;
 			core = new a5.cl.core.Core(_params);
-			_config = a5.cl.core.Utils.mergeObject(core.instantiator().instantiateConfiguration(), params);
+			_config = params;
 			if (_config.breakOnDestroyedMethods == true) {
 				a5._a5_destroyedObjFunc = Function('debugger;');
 			}

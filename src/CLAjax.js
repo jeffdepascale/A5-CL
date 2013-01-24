@@ -144,7 +144,7 @@ a5.Package('a5.cl')
 					clearInterval(aspectArgs.method()._cl_cycleID);
 					delete aspectArgs.method()._cl_cycleID;
 				}
-				return a5.Attribute.ASYNC;
+				return a5.AspectAttribute.ASYNC;
 			}
 			if (rules.cycle) {
 				if (!aspectArgs.method()._cl_cycleID) {
@@ -158,7 +158,7 @@ a5.Package('a5.cl')
 			} else {
 				executeCall();
 			}
-			return a5.Attribute.ASYNC;
+			return a5.AspectAttribute.ASYNC;
 		}	
 		
 		var getData = function(method){

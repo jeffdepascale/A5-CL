@@ -49,7 +49,7 @@ a5.Package('a5.cl.initializers.dom')
 		var eAppIntializingHandler = function(){
 			requestManager = a5.cl.core.RequestManager.instance();
 			if(shouldCacheBreak && typeof self.cl().applicationBuild() === 'string'){
-				var trimVal = im.Utils.trim(self.cl().applicationBuild());
+				var trimVal = a5.cl.core.Utils.trim(self.cl().applicationBuild());
 				if(trimVal !== "")
 					cacheBreakValue = trimVal;
 			}
@@ -145,7 +145,7 @@ a5.Package('a5.cl.initializers.dom')
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);
-								else self.throwError('Error loading css resource at url ' + url);
+								else throw 'Error loading css resource at url ' + url;
 							},
 							headID = document.getElementsByTagName("head")[0],
 							elem = document.createElement('link');
@@ -160,7 +160,7 @@ a5.Package('a5.cl.initializers.dom')
 						} else if (type === 'image'){
 							var imgObj = new Image(),
 							clearImage = function(){
-								a5.cl.mvc.core.GarbageCollector.instance().destroyElement(imgObj);
+								//a5.cl.mvc.core.GarbageCollector.instance().destroyElement(imgObj);
 								imgObj = null;
 								updateCache(url, type, ResourceCache.BROWSER_CACHED_ENTRY);
 								continueLoad();
@@ -172,7 +172,7 @@ a5.Package('a5.cl.initializers.dom')
 												
 							imgObj.onload = clearImage;
 							imgObj.onerror = imgError;
-							imgObj.src = data;
+							imgObj.src = url;
 						} else if (type === 'js' && xhrDependencies === false && asXHR == false){
 							var insertElem = function(){
 								head.insertBefore(include, head.firstChild);
@@ -273,10 +273,8 @@ a5.Package('a5.cl.initializers.dom')
 			value = a5.cl.core.Utils.trim(value);
 			var regex = new RegExp(ResourceCache._cl_delimiterOpen + '.*?' + ResourceCache._cl_delimiterClose, 'g');
 			if(regex.test(value)){
-				if (value.indexOf(ResourceCache._cl_delimiterOpen) !== 0) {
-					self.throwError('Error parsing combined resource: ' + url + '\n\nCombined XML and HTML resources must start with a delimiter');
-					return;
-				}
+				if (value.indexOf(ResourceCache._cl_delimiterOpen) !== 0)
+					throw 'Error parsing combined resource: ' + url + '\n\nCombined XML and HTML resources must start with a delimiter';
 				//if the loaded content is a combined file, uncombine it and store each piece
 				var result, delimiters = [];
 				//find all of the delimiters
@@ -319,8 +317,8 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		var discernType = function(url){
-			var urlArray = url.split('.'),
-				extension = urlArray[urlArray.length-1].replace(/\?.*$/, ''); //the replace() removes querystring params
+			var urlArray = url.replace(/\?.*$/, '').split('.'),
+				extension = urlArray[urlArray.length-1];
 			for (var i = 0, l=cacheTypes.length; i < l; i++) {
 				if (typeof cacheTypes[i] != 'object' ||
 				cacheTypes[i].extension == undefined ||
@@ -336,24 +334,18 @@ a5.Package('a5.cl.initializers.dom')
 		var processData = function(url, data, type, callback){
 			switch (type){
 				case 'js':
+					var insertElem = function(){
+						head.insertBefore(include, head.firstChild);
+					}
+					var head = document.getElementsByTagName("head")[0], include = document.createElement("script");
+					include.type = "text/javascript";					
 					try {
-						var insertElem = function(){
-							head.insertBefore(include, head.firstChild);
-						}
-						var head = document.getElementsByTagName("head")[0], include = document.createElement("script");
-						include.type = "text/javascript";					
-						try {
-							include.appendChild(document.createTextNode(data));
-						} catch (e) {
-							include.text = data;
-						} finally {
-							insertElem();
-							callback();
-						}
+						include.appendChild(document.createTextNode(data));
 					} catch (e) {
-						self.throwError(e);
+						include.text = data;
 					} finally {
-						include = head = null;
+						insertElem();
+						callback();
 					}
 					break;
 				case 'html':

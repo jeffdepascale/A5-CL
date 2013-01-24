@@ -1,4 +1,3 @@
-﻿
 a5.Package('a5.cl.initializers.dom')
 
 	.Extends('a5.cl.CLAddon')
@@ -27,7 +26,7 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		cls.environmentManager = function(){
-			return envManager;
+			return cls.cl().initializer().environmentManager();
 		}
 		
 		/**
@@ -35,20 +34,20 @@ a5.Package('a5.cl.initializers.dom')
 		 * @type String
 		 * @param {Boolean} [root]
 		 */
-		cls.appPath = function(root){ return envManager.appPath(root); }
+		cls.appPath = function(root){ return cls.environmentManager().appPath(root); }
 		
 		/**
 		 *
 		 * @type Number
 		 */
-		cls.browserVersion = function(){	return envManager.browserVersion();	}
+		cls.browserVersion = function(){	return cls.environmentManager().browserVersion();	}
 		
 		/**
 		 * Defines A5 CL client environment types. One of 'DESKTOP', 'MOBILE', or 'TABLET'.
 		 *
 		 * @type String
 		 */
-		cls.clientEnvironment = function(){	return envManager.clientEnvironment.apply(null, arguments);	}
+		cls.clientEnvironment = function(){	return cls.environmentManager().clientEnvironment.apply(null, arguments);	}
 		
 		/**
 		 * Defines A5 CL client platform types.<br/>
@@ -62,12 +61,12 @@ a5.Package('a5.cl.initializers.dom')
 		 *
 		 * @type String
 		 */
-		cls.clientPlatform = function(){		return envManager.clientPlatform();	}
+		cls.clientPlatform = function(){		return cls.environmentManager().clientPlatform();	}
 		
 		/**
 		 * 
 		 */
-		cls.clientOrientation = function(){ return envManager.clientOrientation(); }	
+		cls.clientOrientation = function(){ return cls.environmentManager().clientOrientation(); }	
 		
 		
 		/**
@@ -75,7 +74,7 @@ a5.Package('a5.cl.initializers.dom')
 		 *
 		 * @type String
 		 */
-		cls.environment = function(){	return envManager.environment();	}
+		cls.environment = function(){	return cls.environmentManager().environment();	}
 		
 		/**
 		 * Returns whether the client environment supports manifest caching.
@@ -87,13 +86,13 @@ a5.Package('a5.cl.initializers.dom')
 		 * Returns whether the application is running on http:// or file://
 		 *
 		 */
-		cls.isLocal = function(){ return envManager.isLocal(); }
+		cls.isLocal = function(){ return cls.environmentManager().isLocal(); }
 		
 		/**
 		 * Returns the current online state of the client browser, where supported.
 		 *
 		 */
-		cls.isOnline = function(){	return envManager.isOnline();	}	
+		cls.isOnline = function(){	return cls.environmentManager().isOnline();	}	
 		
 });
 

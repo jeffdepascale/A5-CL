@@ -50,27 +50,13 @@ a5.Package('a5.cl.core')
 			}
 		}
 		
-		this.instantiateConfiguration = function(){
-			var retObj = a5.cl.CLMain._cl_storedCfgs.config;
-			var plgnArray = a5.cl.CLMain._cl_storedCfgs.pluginConfigs;
-			for (var i = 0; i < plgnArray.length; i++) {
-				var obj = {};
-				var split = plgnArray[i].nm.split('.'),
-					lastObj = obj;
-				for(var j = 0; j< split.length; j++)
-					lastObj = lastObj[split[j]] = j == split.length-1 ? plgnArray[i].obj:{};
-				retObj.plugins = a5.cl.core.Utils.mergeObject(retObj.plugins, obj)
-			}
-			return retObj;
-		}
-		
 		this.beginInstantiation = function(){
 			for(var i = 0, l=namespaceArray.length; i<l; i++){
 				var liveNamespace = a5.GetNamespace(applicationPackage + '.' + namespaceArray[i][0], null, true);
 				if(liveNamespace && typeof liveNamespace == 'object'){
 					for (var prop in liveNamespace) 
 						if (typeof liveNamespace[prop] === 'function') {
-							var instance = new liveNamespace(prop);
+							var instance = new liveNamespace[prop];
 							liveNamespace[prop]._cl_isFinal = true;
 							if (namespaceArray[i][0] === 'domains') {
 								instance._name = prop;

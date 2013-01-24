@@ -1,4 +1,3 @@
-
 /**
  * Base class for all classes in an A5 CL application. 
  */
@@ -20,8 +19,10 @@ a5.Package('a5.cl')
 		 * @return {a5.cl.CL}
 		 */
 		proto.cl = function(){
-			return a5.cl.Instance();
+			return a5.cl.CL.instance();
 		}
+		
+		proto.create = function(){ return a5.Create.apply(this, arguments); }
 		
 		/**
 		 * Returns an instance of the class defined by the specified parameters
@@ -73,5 +74,5 @@ a5.Package('a5.cl')
 		proto.appParams = function(){
 			return this.cl().appParams();
 		}
+		
 });
-

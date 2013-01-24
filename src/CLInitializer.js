@@ -1,4 +1,4 @@
-﻿a5.Package('a5.cl')
+a5.Package('a5.cl')
 
     .Extends('a5.cl.CLBase')
     .Prototype('CLInitializer', function (cls, im) {
