@@ -10,15 +10,15 @@ a5.Package("a5.cl")
 		var _params,
 			_initializer,
 			_config,
-			core;
+			core,
+			main;
 		
 		cls._cl_plugins = {};
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
 			var searching = true,
-				clsDef = a5.cl.CLMain,
-				main;
+				clsDef = a5.cl.CLMain;
 			do{
 				if(clsDef.isPrototype() && clsDef._extenderRef.length == 0){
 					searching = false;
@@ -43,6 +43,10 @@ a5.Package("a5.cl")
 		
 		cls._cl_launch = function(){
 			core.initializeCore((_params.environment || null), (_params.clientEnvironment || null));
+		}
+		
+		cls.main = function(){
+			return main;
 		}
 		
 		cls.initializer = function(){

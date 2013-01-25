@@ -167,7 +167,7 @@ a5.Package('a5.cl.initializers.dom')
 							},
 							imgError = function(){
 								if (onerror) onerror(url);
-								else self.redirect(500, 'Error loading image resource at url ' + url);
+								else throw 'Error loading image resource at url ' + url;
 							};
 												
 							imgObj.onload = clearImage;
@@ -201,7 +201,7 @@ a5.Package('a5.cl.initializers.dom')
 								},
 								error: function(){
 									if (onerror) onerror(url);
-									else self.redirect(500, 'Error loading resource at url ' + url);
+									else throw 'Error loading resource at url ' + url;
 								}
 							}
 							if (typeof itemCallback === 'function') {

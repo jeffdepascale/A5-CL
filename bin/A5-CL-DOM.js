@@ -2473,8 +2473,6 @@ a5.Package('a5.cl')
 			return a5.cl.CL.instance();
 		}
 		
-		proto.create = function(){ return a5.Create.apply(this, arguments); }
-		
 		/**
 		 * Returns an instance of the class defined by the specified parameters
 		 * @param {String} type A string value representing the type of class to instantiate. 'Service' is available by default, add-ons may register additional type names for instantiation. 
@@ -3324,7 +3322,7 @@ a5.Package('a5.cl.core')
 			if (status != 200 && status != 0) {
 				var props = getPropsForID(id);
 				if (props && props.error) props.error.call(self, status, errorObj);
-				else this.throwError(errorObj);
+				else throw errorObj;
 			}
 		}
 		
@@ -4680,15 +4678,15 @@ a5.Package("a5.cl")
 		var _params,
 			_initializer,
 			_config,
-			core;
+			core,
+			main;
 		
 		cls._cl_plugins = {};
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
 			var searching = true,
-				clsDef = a5.cl.CLMain,
-				main;
+				clsDef = a5.cl.CLMain;
 			do{
 				if(clsDef.isPrototype() && clsDef._extenderRef.length == 0){
 					searching = false;
@@ -4713,6 +4711,10 @@ a5.Package("a5.cl")
 		
 		cls._cl_launch = function(){
 			core.initializeCore((_params.environment || null), (_params.clientEnvironment || null));
+		}
+		
+		cls.main = function(){
+			return main;
 		}
 		
 		cls.initializer = function(){
@@ -5336,7 +5338,7 @@ a5.Package('a5.cl.initializers.dom')
 							},
 							imgError = function(){
 								if (onerror) onerror(url);
-								else self.redirect(500, 'Error loading image resource at url ' + url);
+								else throw 'Error loading image resource at url ' + url;
 							};
 												
 							imgObj.onload = clearImage;
@@ -5370,7 +5372,7 @@ a5.Package('a5.cl.initializers.dom')
 								},
 								error: function(){
 									if (onerror) onerror(url);
-									else self.redirect(500, 'Error loading resource at url ' + url);
+									else throw 'Error loading resource at url ' + url;
 								}
 							}
 							if (typeof itemCallback === 'function') {
@@ -5690,17 +5692,6 @@ a5.Package('a5.cl.initializers.dom')
 		
 		Utils.makeAbsolutePath = function(url){
 			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.Instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.Instance().initializer().environmentManager().appPath() + url);
-		}
-		
-		Utils.generateSystemHTMLTemplate = function(type, str, replBody){
-			var retHtml = '<div style="margin:0px auto;text-align:center;font-family:Arial;"><h1>A5 CL: ' + type + ' Error</h1>\
-				<div style="text-align:left;margin-bottom:50px;">' + str + '</div></div>';
-			if (replBody) {
-				var body = document.getElementsByTagName('body')[0];
-				if(body) body.innerHTML = retHtml;
-				else throw str;
-			}
-			return retHtml;
 		}
 		
 		Utils.addEventListener = function(target, type, listener, useCapture){

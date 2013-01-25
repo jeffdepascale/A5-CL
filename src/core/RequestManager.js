@@ -180,7 +180,7 @@ a5.Package('a5.cl.core')
 			if (status != 200 && status != 0) {
 				var props = getPropsForID(id);
 				if (props && props.error) props.error.call(self, status, errorObj);
-				else this.throwError(errorObj);
+				else throw errorObj;
 			}
 		}
 		

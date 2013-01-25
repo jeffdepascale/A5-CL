@@ -2472,8 +2472,6 @@ a5.Package('a5.cl')
 			return a5.cl.CL.instance();
 		}
 		
-		proto.create = function(){ return a5.Create.apply(this, arguments); }
-		
 		/**
 		 * Returns an instance of the class defined by the specified parameters
 		 * @param {String} type A string value representing the type of class to instantiate. 'Service' is available by default, add-ons may register additional type names for instantiation. 
@@ -3323,7 +3321,7 @@ a5.Package('a5.cl.core')
 			if (status != 200 && status != 0) {
 				var props = getPropsForID(id);
 				if (props && props.error) props.error.call(self, status, errorObj);
-				else this.throwError(errorObj);
+				else throw errorObj;
 			}
 		}
 		
@@ -4679,15 +4677,15 @@ a5.Package("a5.cl")
 		var _params,
 			_initializer,
 			_config,
-			core;
+			core,
+			main;
 		
 		cls._cl_plugins = {};
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
 			var searching = true,
-				clsDef = a5.cl.CLMain,
-				main;
+				clsDef = a5.cl.CLMain;
 			do{
 				if(clsDef.isPrototype() && clsDef._extenderRef.length == 0){
 					searching = false;
@@ -4712,6 +4710,10 @@ a5.Package("a5.cl")
 		
 		cls._cl_launch = function(){
 			core.initializeCore((_params.environment || null), (_params.clientEnvironment || null));
+		}
+		
+		cls.main = function(){
+			return main;
 		}
 		
 		cls.initializer = function(){

@@ -25,17 +25,6 @@ a5.Package('a5.cl.initializers.dom')
 			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.Instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.Instance().initializer().environmentManager().appPath() + url);
 		}
 		
-		Utils.generateSystemHTMLTemplate = function(type, str, replBody){
-			var retHtml = '<div style="margin:0px auto;text-align:center;font-family:Arial;"><h1>A5 CL: ' + type + ' Error</h1>\
-				<div style="text-align:left;margin-bottom:50px;">' + str + '</div></div>';
-			if (replBody) {
-				var body = document.getElementsByTagName('body')[0];
-				if(body) body.innerHTML = retHtml;
-				else throw str;
-			}
-			return retHtml;
-		}
-		
 		Utils.addEventListener = function(target, type, listener, useCapture){
 			var type = type.indexOf('on') === 0 ? type.substr(2) : type,
 				useCapture = useCapture || false;

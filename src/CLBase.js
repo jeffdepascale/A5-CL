@@ -22,8 +22,6 @@ a5.Package('a5.cl')
 			return a5.cl.CL.instance();
 		}
 		
-		proto.create = function(){ return a5.Create.apply(this, arguments); }
-		
 		/**
 		 * Returns an instance of the class defined by the specified parameters
 		 * @param {String} type A string value representing the type of class to instantiate. 'Service' is available by default, add-ons may register additional type names for instantiation. 
