@@ -15,7 +15,7 @@
 				func.apply(self, args);
 		}, delay);
 		return{
-			clear:function(){ clearInterval(intervalInst); }
+			cancel:function(){ clearInterval(intervalInst); }
 		}
 	},
 	
@@ -3282,6 +3282,8 @@ a5.Package('a5.cl.core')
 				req.open(method, props.url + urlAppend, true);
 				if(props.formData !== true)
 					req.setRequestHeader("Content-type", contentType);
+				if(!props.allowCache && method == "POST")
+					req.setRequestHeader("cache-control", "no-cache");
 				if (props.charSet) req.setRequestHeader("charset", props.charSet);
 				req.send(data);
 			} else {

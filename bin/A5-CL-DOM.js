@@ -16,7 +16,7 @@
 				func.apply(self, args);
 		}, delay);
 		return{
-			clear:function(){ clearInterval(intervalInst); }
+			cancel:function(){ clearInterval(intervalInst); }
 		}
 	},
 	
@@ -3283,6 +3283,8 @@ a5.Package('a5.cl.core')
 				req.open(method, props.url + urlAppend, true);
 				if(props.formData !== true)
 					req.setRequestHeader("Content-type", contentType);
+				if(!props.allowCache && method == "POST")
+					req.setRequestHeader("cache-control", "no-cache");
 				if (props.charSet) req.setRequestHeader("charset", props.charSet);
 				req.send(data);
 			} else {
@@ -5676,7 +5678,7 @@ a5.Package('a5.cl.initializers.dom')
         }
 		
 		cls.Override.applicationInitialized = function(inst){
-			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
+			inst.addOneTimeEventListener(im.CLEvent.PLUGINS_LOADED, ePluginsLoadedHandler);
 			resourceCache = new im.ResourceCache(props.cacheTypes || [], 
 									props.cacheBreak || false, 
 									props.staggerDependencies || true,
@@ -5685,7 +5687,7 @@ a5.Package('a5.cl.initializers.dom')
 			envManager = new im.EnvManager(inst.environment());
 		}
 		
-		var eAppPreparedHandler = function(){
+		var ePluginsLoadedHandler = function(){
 			envManager.initialize(props.trapErrors);
 		}
 });

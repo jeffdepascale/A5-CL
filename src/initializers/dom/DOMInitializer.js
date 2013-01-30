@@ -57,7 +57,7 @@ a5.Package('a5.cl.initializers.dom')
         }
 		
 		cls.Override.applicationInitialized = function(inst){
-			inst.addOneTimeEventListener(im.CLEvent.APPLICATION_PREPARED, eAppPreparedHandler);
+			inst.addOneTimeEventListener(im.CLEvent.PLUGINS_LOADED, ePluginsLoadedHandler);
 			resourceCache = new im.ResourceCache(props.cacheTypes || [], 
 									props.cacheBreak || false, 
 									props.staggerDependencies || true,
@@ -66,7 +66,7 @@ a5.Package('a5.cl.initializers.dom')
 			envManager = new im.EnvManager(inst.environment());
 		}
 		
-		var eAppPreparedHandler = function(){
+		var ePluginsLoadedHandler = function(){
 			envManager.initialize(props.trapErrors);
 		}
 });
