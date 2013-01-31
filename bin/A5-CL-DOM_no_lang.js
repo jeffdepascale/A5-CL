@@ -1,6 +1,8 @@
 
 
 (function(global) {
+
+	"use strict";
 a5.SetNamespace('a5.cl', true, function(){
 
     var initializer = null,
@@ -2055,7 +2057,7 @@ a5.Package('a5.cl')
 
 		cls.Override.before = function(aspectArgs){		
 			var data = null,
-				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [];
+				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [],
 				argsCallback = null,
 				rules = aspectArgs.rules().length ? aspectArgs.rules()[0] : {},
 				propObj = null;
@@ -2553,7 +2555,7 @@ a5.Package('a5.cl')
 
 
 
-})(this);
+})(typeof global !== 'undefined' ? global : this);
 
 
 a5.Package("a5.cl.initializers.dom")

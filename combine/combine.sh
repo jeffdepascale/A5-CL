@@ -14,7 +14,7 @@ echo "" > ./bin/combine.temp.js
 echo "" > ./npm/lib/A5-CL-Node.js
 echo "" > ./bin/A5-CL_no_lang.js
 cat ./lib/A5.js >> ./bin/combine.temp.js
-cat ./lib/A5_Node.js >> ./npm/lib/A5-CL-Node.js
+cat ./lib/A5.js >> ./npm/lib/A5-CL-Node.js
 echo "" >> ./bin/combine.temp.js
 echo "" >> ./npm/lib/A5-CL-Node.js
 cat ./combine/closures/open.txt >> ./bin/combine.temp.js
@@ -32,7 +32,7 @@ do
 done < ./combine/files.txt
 cat ./combine/closures/close.txt >> ./bin/combine.temp.js
 cat ./combine/closures/close.txt >> ./bin/A5-CL_no_lang.js
-cat ./combine/closures/nodeClose.txt >> ./npm/lib/A5-CL-Node.js
+cat ./combine/closures/close.txt >> ./npm/lib/A5-CL-Node.js
 
 java -jar ./combine/yuicompressor-2.4.2.jar ./bin/combine.temp.js -o ./bin/combine-min.temp.js --charset utf-8
 cat ./bin/combine.temp.js > ./bin/A5-CL.js

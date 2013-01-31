@@ -105,7 +105,7 @@ a5.Package('a5.cl')
 
 		cls.Override.before = function(aspectArgs){		
 			var data = null,
-				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [];
+				args = aspectArgs.args() ? Array.prototype.slice.call(aspectArgs.args()) : [],
 				argsCallback = null,
 				rules = aspectArgs.rules().length ? aspectArgs.rules()[0] : {},
 				propObj = null;
