@@ -814,14 +814,8 @@ a5.Package('a5.cl.core')
 								response = req.responseText;
 								
 								if (a5.cl.core.Utils.trim(response) !== "") {
-									try {
-										response = a5.cl.core.JSON.parse(response);
-										retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
-									} 
-									catch (e) {
-										status = 500;
-										retData = "Error parsing JSON response from url: " + props.url + "\nresponse: " + response;
-									}
+									response = a5.cl.core.JSON.parse(response);
+									retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
 								}
 							}
 							else 
