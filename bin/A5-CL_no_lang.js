@@ -787,6 +787,7 @@ a5.Package('a5.cl.core')
 			defaultMethod,
 			reqArray,
 			asyncRunning = false,
+			JSON = 'JSON' in global ? global.JSON : a5.cl.core.JSON,
 			reqCount;
 	
 		this.RequestManager = function(defMethod, defType){
@@ -813,7 +814,7 @@ a5.Package('a5.cl.core')
 								response = req.responseText;
 								
 								if (a5.cl.core.Utils.trim(response) !== "") {
-									response = a5.cl.core.JSON.parse(response);
+									response = JSON.parse(response);
 									retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
 								}
 							}
@@ -867,7 +868,7 @@ a5.Package('a5.cl.core')
 							fd.append(prop, data[prop])
 						data = fd;
 					} else if (props.isJson) {
-						data = a5.cl.core.JSON.stringify(data);
+						data = JSON.stringify(data);
 					} else {
 						contentType = 'application/x-www-form-urlencoded';
 						data = createAppend(data, false);

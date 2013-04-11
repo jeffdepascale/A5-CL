@@ -9,15 +9,40 @@
         namespaceResolver = null,
 		ES5 = (function(){ "use strict"; return !this; })(),
 	
-	Async = function(func, args, delay, repeat){
+	Async = function(func, args, delay, onComplete){
 		var self = this,
 			delay = delay || 0,
 			isA5 = this.isA5,
-			method = repeat ? setInterval : setTimeout,
-			intervalInst = method(function(){
-			if(!isA5 || self._a5_initialized)
-				func.apply(self, args);
-		}, delay);
+			intervalInst = setTimeout(function(){
+				if (!isA5 || self._a5_initialized) {
+					var result = func.apply(self, args);
+					if (onComplete) 
+						onComplete.call(self, result);
+				}
+			}, delay);
+		return{
+			cancel:function(){ clearTimeout(intervalInst); }
+		}
+	},
+	
+	Cycle = function(func, args, interval, maxCycles, onCycle, onComplete){
+		var self = this,
+			isA5 = this.isA5,
+			cycleCount = 0,
+			maxCycles = maxCycles || 0, 
+			intervalInst = setInterval(function(){
+				if (!isA5 || self._a5_initialized) {
+					var result = func.apply(self, args);
+					if (onCycle) 
+						onCycle.call(self, result);
+					cycleCount++;
+					if(cycleCount == maxCycles){
+						clearInterval(intervalInst);
+						if(onComplete)
+							onComplete.call(self, result);
+					}				
+				}
+			}, interval);
 		return{
 			cancel:function(){ clearInterval(intervalInst); }
 		}
@@ -106,12 +131,14 @@
 		SetNamespace:SetNamespace,
 		ES5:ES5,	
 		Async:Async,
+		Cycle:Cycle,
 		TrackGlobalStrays:TrackGlobalStrays,
 		GetGlobalStrays:GetGlobalStrays,
 		RegisterNamespaceResolver: function (resolver) { namespaceResolver = resolver; },
 		CreateGlobals:function(){
 			global.Create = a5.Create;
 			global.Async = a5.Async;
+			global.Cycle = a5.Cycle;
 			global.Package = a5.Package;
 			global.GetNamespace = a5.GetNamespace;
 			global.SetNamespace = a5.SetNamespace;
@@ -746,6 +773,8 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 					processDeclaration(this.constructor._a5_clsDef, this, this, this.constructor.imports(), this.constructor);
 				if(args !== INTERFACE_TEST && args !== BASE_CONSTRUCT)
 					Initialize.apply(this, arguments);
+				//if(a5.ES5)
+				//	Object.freeze(this);
 			}
 		
 		if (type) {
@@ -764,7 +793,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 					extender.prototype = proxy;
 					proxy = null;	
 				} else
-					extender.prototype = new base(BASE_CONSTRUCT);			
+					extender.prototype = new base(BASE_CONSTRUCT);
 				superclass = base;
 			} else
 				return a5.ThrowError('Cannot extend ' + base.namespace() + ', class marked as final.');
@@ -1062,6 +1091,10 @@ a5.SetNamespace('a5.core.classProxyObj',{
 		
 		async:function(func, args){
 			return a5.Async.apply(this, arguments);
+		},
+		
+		cycle:function(){
+			return a5.Cycle.apply(this, arguments);
 		},
 		
 		getAttributes:function(){
@@ -3168,6 +3201,7 @@ a5.Package('a5.cl.core')
 			defaultMethod,
 			reqArray,
 			asyncRunning = false,
+			JSON = 'JSON' in global ? global.JSON : a5.cl.core.JSON,
 			reqCount;
 	
 		this.RequestManager = function(defMethod, defType){
@@ -3194,7 +3228,7 @@ a5.Package('a5.cl.core')
 								response = req.responseText;
 								
 								if (a5.cl.core.Utils.trim(response) !== "") {
-									response = a5.cl.core.JSON.parse(response);
+									response = JSON.parse(response);
 									retData = (props.dataProp && props.dataProp !== undefined) ? response[props.dataProp] : response;
 								}
 							}
@@ -3248,7 +3282,7 @@ a5.Package('a5.cl.core')
 							fd.append(prop, data[prop])
 						data = fd;
 					} else if (props.isJson) {
-						data = a5.cl.core.JSON.stringify(data);
+						data = JSON.stringify(data);
 					} else {
 						contentType = 'application/x-www-form-urlencoded';
 						data = createAppend(data, false);
