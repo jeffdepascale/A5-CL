@@ -3305,12 +3305,6 @@ a5.Package('a5.cl.initializers.dom')
 		Utils.jsVendorPrefixes = ['Webkit', 'Moz', 'ms', 'o'];
 		Utils.jsVendorMethodPrefixes = ['webkit', 'moz', 'ms', 'o'];
 		
-		Utils.purgeBody = function(){
-			var body = document.getElementsByTagName('body')[0];
-			body.innerHTML = '';
-			body.style.margin = '0px';
-		}
-		
 		Utils.getParameterByName = function(name){
 		    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
 		    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));

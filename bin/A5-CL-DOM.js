@@ -1264,10 +1264,10 @@ a5.SetNamespace('a5.core.classProxyObj',{
 				}	
 				if(this.constructor._a5_instance === this)
 					this.constructor._a5_instance = null;
-				if(this.__proto__)
-					this.__proto__ = null;
-				for (prop in this) 
-						delete this[prop];
+				for (prop in this)
+					if(typeof this[prop] === 'object') 
+						this[prop] = null;
+				this._a5_initialized = false;
 			}
 		}
 	}
@@ -5717,12 +5717,6 @@ a5.Package('a5.cl.initializers.dom')
 		Utils.vendorPrefixes = ['-webkit-', '-moz-', '-ms-', '-o-'];
 		Utils.jsVendorPrefixes = ['Webkit', 'Moz', 'ms', 'o'];
 		Utils.jsVendorMethodPrefixes = ['webkit', 'moz', 'ms', 'o'];
-		
-		Utils.purgeBody = function(){
-			var body = document.getElementsByTagName('body')[0];
-			body.innerHTML = '';
-			body.style.margin = '0px';
-		}
 		
 		Utils.getParameterByName = function(name){
 		    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
