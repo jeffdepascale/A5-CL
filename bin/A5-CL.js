@@ -14,7 +14,7 @@
 			isA5 = this.isA5,
 			intervalInst = setTimeout(function(){
 				if (!isA5 || self._a5_initialized) {
-					var result = func.apply(self, args);
+					var result = func.apply(self, args || []);
 					if (onComplete) 
 						onComplete.call(self, result);
 				}
@@ -31,7 +31,7 @@
 			maxCycles = maxCycles || 0, 
 			intervalInst = setInterval(function(){
 				if (!isA5 || self._a5_initialized) {
-					var result = func.apply(self, args);
+					var result = func.apply(self, args || []);
 					if (onCycle) 
 						onCycle.call(self, result);
 					cycleCount++;
@@ -737,7 +737,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			for (i = 0, l = protoPropRef.length; i < l; i++) 
 				protoPropRef[i].call(this);
 			if (args == FROM_CREATE) 
-				this.constructor._a5_instanceConst.apply(this, createArgs);
+				this.constructor._a5_instanceConst.apply(this, createArgs || []);
 			else 
 				this.constructor._a5_instanceConst.apply(this, arguments);
 			a5.core.mixins.mixinsReady(this);

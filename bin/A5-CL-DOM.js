@@ -15,7 +15,7 @@
 			isA5 = this.isA5,
 			intervalInst = setTimeout(function(){
 				if (!isA5 || self._a5_initialized) {
-					var result = func.apply(self, args);
+					var result = func.apply(self, args || []);
 					if (onComplete) 
 						onComplete.call(self, result);
 				}
@@ -32,7 +32,7 @@
 			maxCycles = maxCycles || 0, 
 			intervalInst = setInterval(function(){
 				if (!isA5 || self._a5_initialized) {
-					var result = func.apply(self, args);
+					var result = func.apply(self, args || []);
 					if (onCycle) 
 						onCycle.call(self, result);
 					cycleCount++;
@@ -738,7 +738,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			for (i = 0, l = protoPropRef.length; i < l; i++) 
 				protoPropRef[i].call(this);
 			if (args == FROM_CREATE) 
-				this.constructor._a5_instanceConst.apply(this, createArgs);
+				this.constructor._a5_instanceConst.apply(this, createArgs || []);
 			else 
 				this.constructor._a5_instanceConst.apply(this, arguments);
 			a5.core.mixins.mixinsReady(this);
@@ -5138,6 +5138,8 @@ a5.Package('a5.cl.initializers.dom')
 				if(navigator.userAgent.match(/iPod/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/iPad/i)) _clientPlatform = 'IOS';
 				else if(navigator.userAgent.match(/Android/i)) _clientPlatform = 'ANDROID';
 				else if(navigator.userAgent.match(/IEMobile/i)) _clientPlatform = 'WP7';
+				else if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1) _clientPlatform = 'FIREFOX';
+				else if(navigator.userAgent.toLowerCase().indexOf('chrome') > -1) _clientPlatform = 'CHROME';
 				else if(window.ActiveXObject) _clientPlatform = 'IE';
 				// _clientPlatform = 'OSX';
 			}
@@ -5154,10 +5156,10 @@ a5.Package('a5.cl.initializers.dom')
 		var testBrowserVersion = function(){
 			_browserVersion = 0;
 			if (document.body.style.scrollbar3dLightColor!=undefined) {
-				if (document.body.style.opacity!=undefined) { _browserVersion = 9; }
-				else if (!_forceIE7 && document.body.style.msBlockProgression!=undefined) { _browserVersion = 8; }
-				else if (document.body.style.msInterpolationMode!=undefined) { _browserVersion = 7; }
-				else if (document.body.style.textOverflow!=undefined) { _browserVersion = 6; }
+				if (document.body.style.opacity!=undefined || document.documentMode == 9) { _browserVersion = 9; }
+				else if (!_forceIE7 && document.body.style.msBlockProgression!=undefined || document.documentMode == 8) { _browserVersion = 8; }
+				else if (document.body.style.msInterpolationMode!=undefined || document.documentMode == 7) { _browserVersion = 7; }
+				else if (document.body.style.textOverflow!=undefined|| document.documentMode == 6) { _browserVersion = 6; }
 				else {_browserVersion = 5.5; }
 			}
 		}
