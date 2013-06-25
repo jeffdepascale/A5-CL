@@ -17,6 +17,7 @@ a5.Package("a5.cl")
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
+			_config = params;
 			var searching = true,
 				clsDef = a5.cl.CLMain;
 			do{
@@ -35,7 +36,6 @@ a5.Package("a5.cl")
 			_params = main._cl_params();
 			_initializer = initializer;
 			core = new a5.cl.core.Core(_params);
-			_config = params;
 			if (_config.breakOnDestroyedMethods == true) {
 				a5._a5_destroyedObjFunc = Function('debugger;');
 			}
