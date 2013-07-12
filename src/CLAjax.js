@@ -189,4 +189,22 @@ a5.Package('a5.cl')
 				aspectArgs.scope().notifyReceivers(aspectArgs.args()[0], aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
-	})
+})
+	
+/**
+ * Provides init info for an associated method on a CLAjax instance as associated with a bind configuration from {@link a5.cl.mixins.Binder}
+ */
+a5.Package('a5.cl')
+
+	.Extends('a5.AspectAttribute')
+	.Class('BoundAjaxInitializeAttribute', function(cls){
+		
+		cls.BoundAjaxInitializeAttribute = function(){
+			cls.superclass(this);
+		}
+
+		cls.Override.before = function(aspectArgs){
+			aspectArgs.scope().notifyReceiversOnInitialize();
+			return a5.AspectAttribute.SUCCESS;
+		}
+})

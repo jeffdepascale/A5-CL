@@ -62,6 +62,13 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
+		mixin.notifyReceiversOnInitialize = function(){
+			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
+				var r = this._cl_receivers[i];
+				r.receiver.bindCallInitialize();
+			}
+		}
+		
 		mixin._cl_attachReceiver = function(receiver, params, mapping, scope){
 			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
 			this.notifyReceivers();

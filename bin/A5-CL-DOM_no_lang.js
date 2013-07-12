@@ -414,6 +414,8 @@ a5.Package('a5.cl.interfaces')
 	.Interface('IBindableReceiver', function(cls){
 		
 		cls.receiveBindData = function(){}
+		
+		cls.bindCallInitialize = function(){}
 });
 
 
@@ -1611,6 +1613,13 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
+		mixin.notifyReceiversOnInitialize = function(){
+			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
+				var r = this._cl_receivers[i];
+				r.receiver.bindCallInitialize();
+			}
+		}
+		
 		mixin._cl_attachReceiver = function(receiver, params, mapping, scope){
 			this._cl_receivers.push({receiver:receiver, params:params, mapping:mapping, scope:scope});
 			this.notifyReceivers();
@@ -2136,7 +2145,25 @@ a5.Package('a5.cl')
 				aspectArgs.scope().notifyReceivers(aspectArgs.args()[0], aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
-	})
+})
+	
+/**
+ * Provides init info for an associated method on a CLAjax instance as associated with a bind configuration from {@link a5.cl.mixins.Binder}
+ */
+a5.Package('a5.cl')
+
+	.Extends('a5.AspectAttribute')
+	.Class('BoundAjaxInitializeAttribute', function(cls){
+		
+		cls.BoundAjaxInitializeAttribute = function(){
+			cls.superclass(this);
+		}
+
+		cls.Override.before = function(aspectArgs){
+			aspectArgs.scope().notifyReceiversOnInitialize();
+			return a5.AspectAttribute.SUCCESS;
+		}
+})
 
 
 
@@ -2315,6 +2342,7 @@ a5.Package("a5.cl")
 
 		cls.CL = function(params, initializer){
 			cls.superclass(this);
+			_config = params;
 			var searching = true,
 				clsDef = a5.cl.CLMain;
 			do{
@@ -2333,7 +2361,6 @@ a5.Package("a5.cl")
 			_params = main._cl_params();
 			_initializer = initializer;
 			core = new a5.cl.core.Core(_params);
-			_config = params;
 			if (_config.breakOnDestroyedMethods == true) {
 				a5._a5_destroyedObjFunc = Function('debugger;');
 			}
