@@ -5,6 +5,7 @@ src/CLError.js
 src/CLEvent.js
 src/interfaces/IHTMLTemplate.js
 src/interfaces/ILogger.js
+src/interfaces/IInstanceUIDWriter.js
 src/interfaces/IServiceURLRewriter.js
 src/interfaces/ILaunchInterceptor.js
 src/interfaces/IDataCacheProvider.js

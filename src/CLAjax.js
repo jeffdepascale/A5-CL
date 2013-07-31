@@ -204,7 +204,7 @@ a5.Package('a5.cl')
 		}
 
 		cls.Override.before = function(aspectArgs){
-			aspectArgs.scope().notifyReceiversOnInitialize();
+			aspectArgs.scope().notifyReceiversOnInitialize(aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
 })

@@ -354,9 +354,9 @@ a5.SetNamespace('a5.core.attributes', true, function(){
 		var methods = cls.getMethods(),
 			slice = Array.prototype.slice;
 		for (var i = 0, l = methods.length; i < l; i++) {
-			var methodName = methods[i],
-					method = cls[methodName],
-					appliedAttribs = [];
+			var method = methods[i],
+				methodName = method.getName(),
+				appliedAttribs = [];
 			for(var j = 0, k=attribs.length; j<k; j++){	
 				var attr = slice.call(attribs[j]);
 				if (attr.length > 1) {
@@ -708,7 +708,6 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			if (this.instanceCount() === 0) 
 				this.constructor._a5_instance = this;
 			this.constructor._instanceCount++;
-			var self = this, descenderRef = this, _args = args || [], protoPropRef = [], cs, i, l, mixinRef; 
 			
 			(function(self){
 				self.Super = function(){
@@ -822,6 +821,12 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		eProtoConst._a5_instance = null;
 		eProtoConst._instanceCount = 0;
 		eProtoConst._extenderRef = [];
+		if (namespace === 'a5.Object' || base == Error) {
+			eProtoConst._ancestorRef = [];
+		} else {
+			eProtoConst._ancestorRef = base.prototype.constructor._ancestorRef.slice(0);
+			eProtoConst._ancestorRef.push(base.prototype.constructor);
+		} 
 		eProto._a5_initialized = false;
 			
 		for(prop in a5.core.classProxyObj.construct)
@@ -1039,6 +1044,8 @@ a5.SetNamespace('a5.core.classProxyObj',{
 		doesExtend:function(cls){ return a5.core.verifiers.checkExtends(this, cls); },
 		doesMix:function(cls){ return a5.core.verifiers.checkMixes(this, cls); },
 		getAttributes:function(){ return this._a5_attributes; },
+		getExtenders:function(){ return this._extenderRef; },
+		getAncestors:function(){ return this._ancestorRef; },
 		instance:function(autoCreate, args){
 			if (autoCreate === true)
 				return this._a5_instance || a5.Create(this, args);
@@ -1111,9 +1118,10 @@ a5.SetNamespace('a5.core.classProxyObj',{
 				if((includeInherited || ({}).hasOwnProperty.call(this, prop)) && 
 					typeof(this[prop]) === 'function' && 
 					a5.core.classProxyObj.instance[prop] === undefined && 
+					prop !== "Super" &&
 					prop.substr(0, 4) !== '_a5_' &&
 					(includePrivate || prop.substr(0, 1) !== '_'))
-						retArray.push(prop);
+						retArray.push(this[prop]);
 			return retArray;
 		},
 		getProperties:function(includeInherited, includePrivate){
@@ -1305,7 +1313,6 @@ a5.SetNamespace('a5.core.verifiers', {
 					obj._a5_clsDef.call(testInst, testInst, obj.imports(), obj);
 			} 
 			catch (e) {
-				throw e;
 				return false;
 			}
 			if (!impl.isInterface())
@@ -1619,19 +1626,19 @@ a5.Package('a5')
 		 * Override to specify logic that should occur before the attributed method block is executed.
 		 * @param {a5.AspectCallArguments} Arguments for the context of the aspect;
 		 */
-		cls.before = function(rules, args, scope, method, callback, callOriginator){ return AspectAttribute.NOT_IMPLEMENTED; }
+		cls.before = function(args){ return AspectAttribute.NOT_IMPLEMENTED; }
 		
 		/**
 		 * Override to specify logic that should occur after the attributed method block is executed.
 		 * @param {a5.AspectCallArguments} Arguments for the context of the aspect;
 		 */
-		cls.after = function(rules, args, scope, method, callback, callOriginator, beforeArgs){ return AspectAttribute.NOT_IMPLEMENTED; }
+		cls.after = function(args){ return AspectAttribute.NOT_IMPLEMENTED; }
 		
 		/**
 		 * Override to specify logic that should occur both before and after the attributed method block is executed.
 		 * @param {a5.AspectCallArguments} Arguments for the context of the aspect;
 		 */
-		cls.around = function(){ return AspectAttribute.NOT_IMPLEMENTED; }
+		cls.around = function(args){ return AspectAttribute.NOT_IMPLEMENTED; }
 });
 
 a5.Package('a5')
@@ -1668,7 +1675,7 @@ a5.Package('a5')
 		cls.scope = function(){ return _scope; }
 		
 		/**
-		 * Returns the definition of the wraped method, accessible for reflection purposes.
+		 * Returns the definition of the wrapped method, accessible for reflection purposes.
 		 * @returns {Function}
 		 */
 		cls.method = function(){ return _method; }
@@ -1708,28 +1715,30 @@ a5.Package('a5')
 			//TODO: validate structure of passed rules. 
 			//checkIsValid for datatypes, default vals should still fail out via error
 			if(aspectParams.rules().length > 1){
-				for (i = 0, l = aspectParams.rules().length; i < l; i++) {
+				for (var i = 0, l = aspectParams.rules().length; i < l; i++) {
 					retObj = runRuleCheck(aspectParams.rules()[i], aspectParams.args());
-					if (retObj instanceof a5.ContractException) {
-						cls.throwError(processError(retObj));
-						return a5.AspectAttribute.FAILURE;
-					}
+					if (retObj instanceof a5.ContractException)
+					    continue;
 					if (retObj !== false) {
 						foundTestRule = true;
 						retObj.overloadID = i;
 						break;
 					}
 				}
+				if (retObj instanceof a5.ContractException) {
+				    a5.ThrowError(processError(retObj));
+				    return a5.AspectAttribute.FAILURE;
+				}
 			} else {
 				foundTestRule = true;
 				retObj = runRuleCheck(aspectParams.rules()[0], aspectParams.args(), true);
 				if (retObj instanceof a5.ContractException) {
-					cls.throwError(processError(retObj));
+				    a5.ThrowError(processError(retObj));
 					return a5.AspectAttribute.FAILURE;
 				}
 			}
 			if (!foundTestRule || retObj === false) {
-				cls.throwError(processError(new a5.ContractException('no matching overload found')));
+			    a5.ThrowError(processError(new a5.ContractException('no matching overload found')));
 				return a5.AspectAttribute.FAILURE;
 			} else {
 				return retObj;
@@ -2554,6 +2563,13 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
+		proto.Override.instanceUID = function(){
+			var plgn = this.plugins().getRegisteredProcess('instanceUIDWriter');
+			if (plgn) 
+				return plgn.createUID.call(this, this);
+			return proto.superclass().instanceUID.call(this);
+		}
+		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
@@ -2790,6 +2806,15 @@ a5.Package('a5.cl.interfaces')
 
 
 
+a5.Package('a5.cl.interfaces')
+
+	.Interface('IInstanceUIDWriter', function(cls){
+		
+		cls.createUID = function(obj){}
+})
+
+
+
 
 a5.Package('a5.cl.interfaces')
 
@@ -2846,7 +2871,8 @@ a5.Package('a5.cl.core')
 				logger:null,
 				dataCacheProvider:null,
 				launchInterceptor:null,
-				presentationLayer:null
+				presentationLayer:null,
+				instanceUIDWriter:null
 			}
 		
 		this.PluginManager = function(){
@@ -4026,10 +4052,11 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
-		mixin.notifyReceiversOnInitialize = function(){
+		mixin.notifyReceiversOnInitialize = function(params){
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
-				r.receiver.bindCallInitialize();
+				if (params === undefined || params === r.params)
+					r.receiver.bindCallInitialize();
 			}
 		}
 		
@@ -4573,7 +4600,7 @@ a5.Package('a5.cl')
 		}
 
 		cls.Override.before = function(aspectArgs){
-			aspectArgs.scope().notifyReceiversOnInitialize();
+			aspectArgs.scope().notifyReceiversOnInitialize(aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
 })

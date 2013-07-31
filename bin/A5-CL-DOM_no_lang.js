@@ -141,6 +141,13 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
+		proto.Override.instanceUID = function(){
+			var plgn = this.plugins().getRegisteredProcess('instanceUIDWriter');
+			if (plgn) 
+				return plgn.createUID.call(this, this);
+			return proto.superclass().instanceUID.call(this);
+		}
+		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
@@ -377,6 +384,15 @@ a5.Package('a5.cl.interfaces')
 
 
 
+a5.Package('a5.cl.interfaces')
+
+	.Interface('IInstanceUIDWriter', function(cls){
+		
+		cls.createUID = function(obj){}
+})
+
+
+
 
 a5.Package('a5.cl.interfaces')
 
@@ -433,7 +449,8 @@ a5.Package('a5.cl.core')
 				logger:null,
 				dataCacheProvider:null,
 				launchInterceptor:null,
-				presentationLayer:null
+				presentationLayer:null,
+				instanceUIDWriter:null
 			}
 		
 		this.PluginManager = function(){
@@ -1613,10 +1630,11 @@ a5.Package('a5.cl.mixins')
 			}
 		}
 		
-		mixin.notifyReceiversOnInitialize = function(){
+		mixin.notifyReceiversOnInitialize = function(params){
 			for (var i = 0, l = this._cl_receivers.length; i < l; i++) {
 				var r = this._cl_receivers[i];
-				r.receiver.bindCallInitialize();
+				if (params === undefined || params === r.params)
+					r.receiver.bindCallInitialize();
 			}
 		}
 		
@@ -2160,7 +2178,7 @@ a5.Package('a5.cl')
 		}
 
 		cls.Override.before = function(aspectArgs){
-			aspectArgs.scope().notifyReceiversOnInitialize();
+			aspectArgs.scope().notifyReceiversOnInitialize(aspectArgs.method().getName());
 			return a5.AspectAttribute.SUCCESS;
 		}
 })

@@ -13,7 +13,8 @@ a5.Package('a5.cl.core')
 				logger:null,
 				dataCacheProvider:null,
 				launchInterceptor:null,
-				presentationLayer:null
+				presentationLayer:null,
+				instanceUIDWriter:null
 			}
 		
 		this.PluginManager = function(){

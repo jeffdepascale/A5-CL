@@ -57,6 +57,13 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
+		proto.Override.instanceUID = function(){
+			var plgn = this.plugins().getRegisteredProcess('instanceUIDWriter');
+			if (plgn) 
+				return plgn.createUID.call(this, this);
+			return proto.superclass().instanceUID.call(this);
+		}
+		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
