@@ -410,6 +410,7 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 		queuedPrototypes = [], 
 		queuedImplementValidations = [], 
 		prop, 
+		uidWriter = null,
 		FROM_CREATE = '_a5_constructFromCreate', 
 		BASE_CONSTRUCT = "_a5_baseConstruct", 
 		INTERFACE_TEST = '_a5_interfaceTest',
@@ -694,6 +695,17 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 			return { Enum: Enum, Static: Static, Import: Import, Extends: Extends, Mixin: Mixin, Mix: Mix, Implements: Implements, Class: Class, Prototype: Prototype, Interface: Interface };
 	}, 
 	
+	hashString = function(str){
+		var h = 0;
+		if (!str.length) 
+			return h;
+		for (var i = 0; i < str.length; i++) {
+			h = ((h<<5)-h)+str.charCodeAt(i);
+			h = h & h;
+	    }
+		return Math.abs(h);
+	},
+	
 	Initialize = function(args, createArgs){
 		if (!this._a5_initialized) {
 			if (this.constructor.isInterface()) 
@@ -704,7 +716,9 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 				return a5.ThrowError(217, null, { nm: this.constructor.namespace() });
 			var self = this, descenderRef = this, _args = args || [], protoPropRef = [], cs, i, l, mixinRef;
 			this._a5_initialized = true;
-			this._a5_instanceUID = this.namespace().replace(/\./g, '_') + '__' + this.constructor.instanceCount();
+			this._a5_instanceUID = hashString(this.namespace() + this.constructor.instanceCount());
+			if(uidWriter)
+				this._a5_instanceUID = uidWriter(this, this._a5_instanceUID);
 			if (this.instanceCount() === 0) 
 				this.constructor._a5_instance = this;
 			this.constructor._instanceCount++;
@@ -1024,6 +1038,8 @@ a5.SetNamespace('a5.core.classBuilder', true, function(){
 	        a5.core.verifiers.validateImplementation(queuedImplementValidations[i].pkgObj, queuedImplementValidations[i].obj); 
 	    queuedImplementValidations = [];
 	}
+	
+	a5.RegisterUIDWriter = function (writer) { uidWriter = writer; };
 	
 	a5._a5_processImports = processImports;
 })
@@ -2563,13 +2579,6 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
-		proto.Override.instanceUID = function(){
-			var plgn = this.plugins().getRegisteredProcess('instanceUIDWriter');
-			if (plgn) 
-				return plgn.createUID.call(this, this);
-			return proto.superclass().instanceUID.call(this);
-		}
-		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
@@ -2936,11 +2945,10 @@ a5.Package('a5.cl.core')
 					return;
 				}
 				plugins[i].initializePlugin();
-					
+				
 			}
-			a5.cl.PluginConfig = function(){
-				throw new a5.cl.CLError('Invalid call to MVC pluginConfig method: method must be called prior to plugin load.');
-			}
+			if(processes.instanceUIDWriter)
+				a5.RegisterUIDWriter(processes.instanceUIDWriter.createUID);			
 		}
 		
 		this.defineRegisterableProcess = function(process){

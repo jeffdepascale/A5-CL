@@ -140,13 +140,6 @@ a5.Package('a5.cl')
 					console.warn.apply(console, arguments);
 		}
 		
-		proto.Override.instanceUID = function(){
-			var plgn = this.plugins().getRegisteredProcess('instanceUIDWriter');
-			if (plgn) 
-				return plgn.createUID.call(this, this);
-			return proto.superclass().instanceUID.call(this);
-		}
-		
 		/**
 		 * Returns a reference to the plugins object for the A5 CL application instance.
 		 * @return {Object}
@@ -513,11 +506,10 @@ a5.Package('a5.cl.core')
 					return;
 				}
 				plugins[i].initializePlugin();
-					
+				
 			}
-			a5.cl.PluginConfig = function(){
-				throw new a5.cl.CLError('Invalid call to MVC pluginConfig method: method must be called prior to plugin load.');
-			}
+			if(processes.instanceUIDWriter)
+				a5.RegisterUIDWriter(processes.instanceUIDWriter.createUID);			
 		}
 		
 		this.defineRegisterableProcess = function(process){
