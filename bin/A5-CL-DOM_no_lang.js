@@ -2077,8 +2077,7 @@ a5.Package('a5.cl')
 				propObj = null;
 			if (rules.takesData === true && args.length)
 				data = args.shift();
-			if(rules.props)
-				propObj = rules.props;
+			propObj = rules;
 			if(rules.hasErrorCallback){
 				if(!propObj)
 					propObj= {};
