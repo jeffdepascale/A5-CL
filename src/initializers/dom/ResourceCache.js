@@ -140,8 +140,8 @@ a5.Package('a5.cl.initializers.dom')
 				if (!cacheValue) {
 					if (type) {
 						url = im.Utils.makeAbsolutePath(checkReplacements(url));
-						if(cacheBreakValue)
-							url = url + '?a5=' + cacheBreakValue;
+						if (cacheBreakValue) 
+							url = url + (url.indexOf('?') == -1 ? "?" : "&") + 'a5=' + cacheBreakValue;
 						if (type === 'css') {
 							var cssError = function(){
 								if (onerror) onerror(url);

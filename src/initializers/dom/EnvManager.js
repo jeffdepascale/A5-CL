@@ -106,8 +106,7 @@ a5.Package('a5.cl.initializers.dom')
 				else if(navigator.userAgent.match(/IEMobile/i)) _clientPlatform = 'WP7';
 				else if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1) _clientPlatform = 'FIREFOX';
 				else if(navigator.userAgent.toLowerCase().indexOf('chrome') > -1) _clientPlatform = 'CHROME';
-				else if(window.ActiveXObject) _clientPlatform = 'IE';
-				// _clientPlatform = 'OSX';
+				else if(window.ActiveXObject || !!(navigator.userAgent.match(/Trident/))) _clientPlatform = 'IE';
 			}
 			if(!_clientPlatform) _clientPlatform = 'UNKNOWN';
 		}
@@ -122,7 +121,9 @@ a5.Package('a5.cl.initializers.dom')
 		var testBrowserVersion = function(){
 			_browserVersion = 0;
 			if (document.body.style.scrollbar3dLightColor!=undefined) {
-				if (document.body.style.opacity!=undefined || document.documentMode == 9) { _browserVersion = 9; }
+				if (navigator.userAgent.match(/rv:11/)){ _browserVersion = 11; }
+				else if(navigator.userAgent.match(/MSIE 10.0/)){ _browserVersion = 10; }
+				else if (document.body.style.opacity!=undefined || document.documentMode == 9) { _browserVersion = 9; }
 				else if (!_forceIE7 && document.body.style.msBlockProgression!=undefined || document.documentMode == 8) { _browserVersion = 8; }
 				else if (document.body.style.msInterpolationMode!=undefined || document.documentMode == 7) { _browserVersion = 7; }
 				else if (document.body.style.textOverflow!=undefined|| document.documentMode == 6) { _browserVersion = 6; }
