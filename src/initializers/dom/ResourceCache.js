@@ -262,8 +262,14 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		var checkCache = function(url){
+			//check the cache for the URL specified
 			var value = resources[url],
 				cached = (typeof value === 'object');
+			//if no value was found, make the path absolute and try again
+			if(!cached){
+				value = resources[a5.cl.core.Utils.makeAbsolutePath(url)];
+				cached = (typeof value === 'object');
+			}
 			if(!value && shouldUseCache && value !== ResourceCache.BROWSER_CACHED_ENTRY && value !== ResourceCache.COMBINED_DEPENDENCY)
 				value = self.getValue(url);
 			return (cached ? value.data : null);
