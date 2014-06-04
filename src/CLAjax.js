@@ -119,6 +119,8 @@ a5.Package('a5.cl')
 			}
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
+			if(!propObj.error && args.length == 2 && typeof args[1] == 'function')
+				propObj.error = args.pop();	
 			var executeCall = function(){
 				if (rules.cacheResponse && getData(aspectArgs.method())) {
 					setTimeout(function(){
@@ -186,6 +188,8 @@ a5.Package('a5.cl')
 				aspectArgs.rules()[0].receiverMethod.call(null, aspectArgs.args()[0]);
 			else
 				aspectArgs.scope().notifyReceivers(aspectArgs.args()[0], aspectArgs.method().getName());
+			if(aspectArgs.args().length > 1 && typeof aspectArgs.args()[1] == "function")
+				aspectArgs.args()[1].call(null, aspectArgs.args()[0]);
 			return a5.AspectAttribute.SUCCESS;
 		}
 })

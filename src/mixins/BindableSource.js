@@ -89,7 +89,7 @@ a5.Package('a5.cl.mixins')
 			var data,
 				isQuery = false;
 			//TODO - needs to move to ORM implementation
-			if(dataSource instanceof a5.cl.CLQueryResult)
+			if(a5.cl.orm && dataSource instanceof a5.cl.CLQueryResult)
 				isQuery = true;
 			if(isQuery)
 				data = dataSource._cl_data;

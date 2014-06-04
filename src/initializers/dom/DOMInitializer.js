@@ -23,6 +23,10 @@ a5.Package('a5.cl.initializers.dom')
 		cls.Override.load = function(arr, complete, progress){
 			return resourceCache.load(arr, complete, progress);
 		}
+		
+		cls.Override.cacheLoadedValue = function(name, value, type){
+			return resourceCache.cacheURLValue(name, type, value);
+		}
 
         cls.Override.initialize = function (_props, callback) {
             props = _props;

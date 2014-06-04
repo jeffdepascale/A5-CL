@@ -64,6 +64,10 @@ a5.Package('a5.cl.initializers.dom')
 			else this.clearScopeValues();
 		}
 		
+		this.cacheURLValue = function(url, type, value){
+			updateCache(url, type, value);
+		}
+		
 		this.load = function(value, callback, itemCallback, onerror, asXHR){
 			var urlArray = [],
 			retValue,

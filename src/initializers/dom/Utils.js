@@ -12,11 +12,11 @@ a5.Package('a5.cl.initializers.dom')
 		}
 		
 		Utils.isAbsolutePath = function(url){
-			return (url.indexOf('://') !== -1 || url.substr(0, 1) == '/');
+			return (url.indexOf('//') !== -1 || url.substr(0, 1) == '/');
 		}
 		
 		Utils.makeAbsolutePath = function(url){
-			return Utils.isAbsolutePath(url) ? (url.substr(0, 1) == '/' ? a5.cl.Instance().initializer().environmentManager().appPath(true) + url:url):(a5.cl.Instance().initializer().environmentManager().appPath() + url);
+			return Utils.isAbsolutePath(url) ? url:(a5.cl.Instance().initializer().environmentManager().appPath() + url);
 		}
 		
 		Utils.addEventListener = function(target, type, listener, useCapture){

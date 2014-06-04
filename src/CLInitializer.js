@@ -16,6 +16,10 @@ a5.Package('a5.cl')
 			return false;
 		}
 		
+		cls.cacheLoadedValue = function(name, value, type){
+			return false;
+		}
+		
 		cls.applicationInitialized = function(inst){
 		}
 });
