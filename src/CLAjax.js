@@ -120,7 +120,7 @@ a5.Package('a5.cl')
 			if(rules.hasCallback === true && args.length && typeof args[0] === 'function')
 				argsCallback = args.shift();
 			if(!propObj.error && args.length == 2 && typeof args[1] == 'function')
-				propObj.error = args.pop();	
+				propObj.error = args[1];	
 			var executeCall = function(){
 				if (rules.cacheResponse && getData(aspectArgs.method())) {
 					setTimeout(function(){

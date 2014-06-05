@@ -170,7 +170,7 @@ a5.Package('a5.cl.core')
 		
 		this.updateProgress = function(id, e){
 			var props = getPropsForID(id);
-			if(props.progress) props.progress.call(self, e);
+			if(props && props.progress) props.progress.call(self, e);
 		}
 		
 		this.onError = function(id, status, errorObj){
