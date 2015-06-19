@@ -93,14 +93,14 @@ a5.Package('a5.cl')
 		AjaxCallAttribute.CANCEL_CYCLE	= 'ajaxCallAttributeCancelCycle';
 		
 	})
-	.Class('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
+	.Prototype('AjaxCallAttribute', function(cls, im, AjaxCallAttribute){
 		
-		var cycledCalls = {},
-			data = {};
+		this.Properties(function(){
+			this._cl_data = {};
+		});
 		
 		cls.AjaxCallAttribute = function(){
 			cls.superclass(this);
-			
 		}
 
 		cls.Override.before = function(aspectArgs){		
@@ -122,9 +122,9 @@ a5.Package('a5.cl')
 			if(!propObj.error && args.length == 2 && typeof args[1] == 'function')
 				propObj.error = args[1];	
 			var executeCall = function(){
-				if (rules.cacheResponse && getData(aspectArgs.method())) {
+				if (rules.cacheResponse && this._cl_getData(aspectArgs.method())) {
 					setTimeout(function(){
-						args.unshift(getData(aspectArgs.method()));
+						args.unshift(this._cl_getData(aspectArgs.method()));
 						if (argsCallback) 
 							argsCallback(args);
 						aspectArgs.callback()(args);
@@ -132,7 +132,7 @@ a5.Package('a5.cl')
 				} else {	
 					aspectArgs.scope().call(aspectArgs.method().getName(), data, function(response){
 						if (rules.cacheResponse)
-							storeData(aspectArgs.method(), response);
+							this._cl_storeData(aspectArgs.method(), response);
 						args.unshift(response);
 						if (argsCallback) 
 							argsCallback(args);
@@ -162,12 +162,12 @@ a5.Package('a5.cl')
 			return a5.AspectAttribute.ASYNC;
 		}	
 		
-		var getData = function(method){
-			return data[method.getClassInstance().instanceUID() + "_" + method.getName()];
+		cls._cl_getData = function(method){
+			return this._cl_data[method.getClassInstance().instanceUID() + "_" + method.getName()];
 		}	
 		
-		var storeData = function(method, value){
-			data[method.getClassInstance().instanceUID() + "_" + method.getName()] = value;
+		cls._cl_storeData = function(method, value){
+			this._cl_data[method.getClassInstance().instanceUID() + "_" + method.getName()] = value;
 		}
 })
 
