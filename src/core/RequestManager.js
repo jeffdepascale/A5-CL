@@ -90,8 +90,14 @@ a5.Package('a5.cl.core')
 					if (props.formData === true) {
 						contentType = "multipart/form-data";
 						var fd = new FormData();
-						for (var prop in data) 
-							fd.append(prop, data[prop])
+						for (var prop in data) {
+							if (Object.prototype.toString.call(data[prop]) === '[object Array]') {
+								var arr = data[prop];
+								for (var x = 0, y = arr.length; x < y; x++)
+									fd.append(prop, arr[x]);
+							} else
+								fd.append(prop, data[prop])
+						}
 						data = fd;
 					} else if (props.isJson) {
 						data = JSON.stringify(data);
